@@ -36,12 +36,6 @@
     </QtMoc>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MainWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ShutdownDialog.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SystemCommandService.h">
       <Filter>Header Files</Filter>
     </ClInclude>
