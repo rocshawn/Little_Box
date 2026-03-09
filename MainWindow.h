@@ -13,10 +13,13 @@ public:
 
 private slots:
     void openShutdownDialog();
+    void openWeddingAdminPage();
 
 private:
     void setupUi();
     void setupConnections();
+    void setupStatusBar();
 
     QPushButton* shutdownButton_{ nullptr };
+    QPushButton* weddingAdminButton_{ nullptr };
 };
