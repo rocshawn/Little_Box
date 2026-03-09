@@ -1,25 +1,33 @@
 #include "MainWindow.h"
+
 #include "ShutdownDialog.h"
+
 #include <QPushButton>
 
-MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
-    // 设置主窗口属性
-    this->setWindowTitle("ShutdownTimer");
-    this->setFixedSize(400, 300);
+namespace {
+constexpr int kMainWindowWidth = 420;
+constexpr int kMainWindowHeight = 280;
+} // namespace
 
-    // 创建按钮并添加到主窗口
-    QPushButton* shutdownButton = new QPushButton("ShutdownTimer", this);
-    shutdownButton->setGeometry(150, 130, 100, 30);
-
-    // 连接按钮的点击事件到槽函数
-    connect(shutdownButton, &QPushButton::clicked, this, &MainWindow::openShutdownDialog);
+MainWindow::MainWindow(QWidget* parent)
+    : QMainWindow(parent) {
+    setupUi();
+    setupConnections();
 }
 
-MainWindow::~MainWindow() {
+void MainWindow::setupUi() {
+    setWindowTitle("Shutdown Timer");
+    setFixedSize(kMainWindowWidth, kMainWindowHeight);
+
+    shutdownButton_ = new QPushButton("Open Shutdown Scheduler", this);
+    shutdownButton_->setGeometry(120, 120, 180, 36);
+}
+
+void MainWindow::setupConnections() {
+    connect(shutdownButton_, &QPushButton::clicked, this, &MainWindow::openShutdownDialog);
 }
 
 void MainWindow::openShutdownDialog() {
-    // 打开定时关机对话框
-    ShutdownDialog* shutdownDialog = new ShutdownDialog(this);
-    shutdownDialog->show();
+    ShutdownDialog shutdownDialog(this);
+    shutdownDialog.exec();
 }

@@ -1,17 +1,22 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#pragma once
 
 #include <QMainWindow>
 
-class MainWindow : public QMainWindow {
+class QPushButton;
+
+class MainWindow final : public QMainWindow {
     Q_OBJECT
 
 public:
-    MainWindow(QWidget* parent = nullptr);
-    ~MainWindow();
+    explicit MainWindow(QWidget* parent = nullptr);
+    ~MainWindow() override = default;
 
 private slots:
     void openShutdownDialog();
-};
 
-#endif // MAINWINDOW_H
+private:
+    void setupUi();
+    void setupConnections();
+
+    QPushButton* shutdownButton_{ nullptr };
+};

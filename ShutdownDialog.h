@@ -1,24 +1,27 @@
 #pragma once
-#ifndef SHUTDOWNDIALOG_H
-#define SHUTDOWNDIALOG_H
 
 #include <QDialog>
 
 class QLineEdit;
+class QPushButton;
 
-class ShutdownDialog : public QDialog {
+class ShutdownDialog final : public QDialog {
     Q_OBJECT
 
 public:
-    ShutdownDialog(QWidget* parent = nullptr);
-    ~ShutdownDialog();
-
-private:
-    QLineEdit* timeEdit;
+    explicit ShutdownDialog(QWidget* parent = nullptr);
+    ~ShutdownDialog() override = default;
 
 private slots:
-    void onConfirmClicked();
-    void reject();
-};
+    void handleConfirmClicked();
+    void handleCancelShutdownClicked();
 
-#endif // SHUTDOWNDIALOG_H
+private:
+    void setupUi();
+    void setupConnections();
+
+    QLineEdit* secondsEdit_{ nullptr };
+    QPushButton* confirmButton_{ nullptr };
+    QPushButton* cancelShutdownButton_{ nullptr };
+    QPushButton* closeButton_{ nullptr };
+};

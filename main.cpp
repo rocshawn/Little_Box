@@ -1,11 +1,11 @@
 #include <QApplication>
-//#include <QTextCodec>
 #include "MainWindow.h"
 
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
-    // …Ë÷√±‡¬Î
-    //QTextCodec::setCodecForLocale(QTextCodec::codecForName("UTF-8"));
+    QApplication::setApplicationName("Little Box");
+    QApplication::setOrganizationName("LittleBox");
+
     MainWindow mainWindow;
     mainWindow.show();
 

@@ -1,60 +1,94 @@
 #include "ShutdownDialog.h"
-#include <QVBoxLayout>
+
+#include "SystemCommandService.h"
+
 #include <QHBoxLayout>
+#include <QIntValidator>
 #include <QLabel>
-#include <QPushButton>
 #include <QLineEdit>
 #include <QMessageBox>
-#include <QProcess>
+#include <QPushButton>
+#include <QVBoxLayout>
 
-ShutdownDialog::ShutdownDialog(QWidget* parent) : QDialog(parent), timeEdit(new QLineEdit(this)) {
-    // 设置对话框属性
-    this->setWindowTitle("ShutdownTimerSet");
-    this->setFixedSize(300, 200);
+namespace {
+constexpr int kDialogWidth = 360;
+constexpr int kDialogHeight = 190;
+constexpr int kMaxSeconds = 315360000; // 10 years
+} // namespace
 
-    // 创建布局和控件
-    QVBoxLayout* layout = new QVBoxLayout(this);
-    QHBoxLayout* inputLayout = new QHBoxLayout();
-    QLabel* promptLabel = new QLabel("Enter seconds", this);
-    QPushButton* confirmButton = new QPushButton("confirm", this);
-    QPushButton* cancelButton = new QPushButton("cancel", this);
-    QPushButton* exitButton = new QPushButton("EXIT", this);
+ShutdownDialog::ShutdownDialog(QWidget* parent)
+    : QDialog(parent) {
+    setupUi();
+    setupConnections();
+}
 
-    // 设置布局
+void ShutdownDialog::setupUi() {
+    setWindowTitle("Shutdown Scheduler");
+    setFixedSize(kDialogWidth, kDialogHeight);
+
+    auto* mainLayout = new QVBoxLayout(this);
+    auto* inputLayout = new QHBoxLayout();
+    auto* buttonLayout = new QHBoxLayout();
+
+    auto* promptLabel = new QLabel("Seconds until shutdown:", this);
+    secondsEdit_ = new QLineEdit(this);
+    secondsEdit_->setPlaceholderText("e.g. 300");
+    secondsEdit_->setValidator(new QIntValidator(1, kMaxSeconds, secondsEdit_));
+
+    confirmButton_ = new QPushButton("Schedule", this);
+    cancelShutdownButton_ = new QPushButton("Cancel Schedule", this);
+    closeButton_ = new QPushButton("Close", this);
+
     inputLayout->addWidget(promptLabel);
-    inputLayout->addWidget(timeEdit);
-    layout->addLayout(inputLayout);
-    layout->addWidget(confirmButton);
-    layout->addWidget(cancelButton);
-    layout->addWidget(exitButton);
+    inputLayout->addWidget(secondsEdit_);
 
-    // 连接按钮事件
-    connect(confirmButton, &QPushButton::clicked, this, &ShutdownDialog::onConfirmClicked);
-    connect(cancelButton, &QPushButton::clicked, this, &ShutdownDialog::reject);
-    connect(exitButton, &QPushButton::clicked, this, &ShutdownDialog::accept);
+    buttonLayout->addWidget(confirmButton_);
+    buttonLayout->addWidget(cancelShutdownButton_);
+    buttonLayout->addWidget(closeButton_);
+
+    mainLayout->addLayout(inputLayout);
+    mainLayout->addStretch();
+    mainLayout->addLayout(buttonLayout);
 }
 
-ShutdownDialog::~ShutdownDialog() {
+void ShutdownDialog::setupConnections() {
+    connect(confirmButton_, &QPushButton::clicked, this, &ShutdownDialog::handleConfirmClicked);
+    connect(cancelShutdownButton_, &QPushButton::clicked, this, &ShutdownDialog::handleCancelShutdownClicked);
+    connect(closeButton_, &QPushButton::clicked, this, &QDialog::accept);
 }
 
-void ShutdownDialog::onConfirmClicked() {
-    bool ok;
-    int seconds = timeEdit->text().toInt(&ok);
-    if (ok && seconds > 0) {
-        QMessageBox::StandardButton reply;
-        reply = QMessageBox::question(this, "确认",
-            QString("Shut down in %1 seconds ? ").arg(seconds),
-            QMessageBox::Yes | QMessageBox::No);
-        if (reply == QMessageBox::Yes) {
-            // 执行关机命令
-            QString command = "shutdown -s -t " + QString::number(seconds);
-            QProcess::execute(command);
-        }
+void ShutdownDialog::handleConfirmClicked() {
+    bool ok = false;
+    const int seconds = secondsEdit_->text().toInt(&ok);
+    if (!ok || seconds <= 0) {
+        QMessageBox::warning(this, "Invalid Input", "Please enter a positive integer number of seconds.");
+        return;
     }
+
+    const auto result = QMessageBox::question(
+        this,
+        "Confirm Shutdown",
+        QString("The system will shut down in %1 seconds. Continue?").arg(seconds),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No);
+
+    if (result != QMessageBox::Yes) {
+        return;
+    }
+
+    if (!SystemCommandService::scheduleShutdown(seconds)) {
+        QMessageBox::critical(this, "Command Failed", "Unable to schedule shutdown. Please check system permissions.");
+        return;
+    }
+
+    QMessageBox::information(this, "Scheduled", "Shutdown schedule created successfully.");
 }
 
-void ShutdownDialog::reject() {
-    QProcess::execute("shutdown -a");
+void ShutdownDialog::handleCancelShutdownClicked() {
+    if (!SystemCommandService::cancelShutdown()) {
+        QMessageBox::warning(this, "Cancel Failed", "No active shutdown schedule found or command execution failed.");
+        return;
+    }
+
+    QMessageBox::information(this, "Cancelled", "Shutdown schedule has been cancelled.");
 }
-
-
