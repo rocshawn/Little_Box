@@ -43,11 +43,11 @@ void MainWindow::setupUi() {
     auto* logoBadge = new QLabel("LB", heroCard);
     auto* titleLabel = new QLabel("Little Box 工具箱", heroCard);
     auto* subtitleLabel = new QLabel("统一的桌面轻工具入口", heroCard);
-    auto* featureLabel = new QLabel("提供定时关机与快捷网页访问能力，界面与交互采用统一品牌风格。", heroCard);
-    auto* highlightLabel = new QLabel("当前提供两项操作：创建关机计划、打开婚礼管理后台。", heroCard);
+    auto* featureLabel = new QLabel("提供轻量、直接、统一的桌面操作体验。", heroCard);
+    auto* highlightLabel = new QLabel("当前提供两项操作：创建关机计划、打开婚礼管理页面。", heroCard);
 
     shutdownButton_ = new QPushButton("定时关机", heroCard);
-    weddingAdminButton_ = new QPushButton("打开婚礼管理页", heroCard);
+    weddingAdminButton_ = new QPushButton("打开网站", heroCard);
 
     centralWidget->setObjectName("centralWidget");
     heroCard->setObjectName("heroCard");
@@ -144,8 +144,8 @@ void MainWindow::openShutdownDialog() {
 }
 
 void MainWindow::openWeddingAdminPage() {
-    const bool opened = QDesktopServices::openUrl(QUrl(QStringLiteral("http://wedding.shawn.chat/admin.html")));
+    const bool opened = QDesktopServices::openUrl(QUrl(QStringLiteral("https://blog.shawn.chat/")));
     if (!opened) {
-        QMessageBox::warning(this, "打开失败", "无法使用默认浏览器打开婚礼管理页面。请检查系统浏览器配置。");
+        QMessageBox::warning(this, "打开失败", "无法使用默认浏览器打开网页。请检查系统浏览器配置。");
     }
 }

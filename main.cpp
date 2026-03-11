@@ -1,5 +1,6 @@
 #include <QApplication>
 
+#include "AppIcon.h"
 #include "MainWindow.h"
 
 int main(int argc, char* argv[]) {
@@ -8,7 +9,11 @@ int main(int argc, char* argv[]) {
     QApplication::setApplicationDisplayName("Little Box 工具箱");
     QApplication::setOrganizationName("LittleBox");
 
+    const QIcon appIcon = createAppIcon();
+    QApplication::setWindowIcon(appIcon);
+
     MainWindow mainWindow;
+    mainWindow.setWindowIcon(appIcon);
     mainWindow.show();
 
     return app.exec();

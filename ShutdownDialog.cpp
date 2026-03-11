@@ -34,7 +34,8 @@ void ShutdownDialog::setupUi() {
     auto* contentCard = new QFrame(this);
     auto* mainLayout = new QVBoxLayout(contentCard);
     auto* titleLabel = new QLabel("定时关机", contentCard);
-    auto* descriptionLabel = new QLabel("输入延迟秒数后，Windows 将在倒计时结束时执行关机。", contentCard);
+    auto* descriptionLabel = new QLabel("输入延迟秒数后，系统将在倒计时结束时执行关机。", contentCard);
+
     auto* inputLabel = new QLabel("延迟秒数", contentCard);
     auto* helperLabel = new QLabel("示例：输入 300 表示 5 分钟后关机。", contentCard);
     auto* inputLayout = new QVBoxLayout();
