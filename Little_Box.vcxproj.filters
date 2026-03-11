@@ -29,6 +29,12 @@
     <ClCompile Include="SystemCommandService.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MazeGameWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FlappyBirdWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="ShutdownDialog.h">
@@ -37,6 +43,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppIcon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlappyBirdWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MazeGameWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SystemCommandService.h">

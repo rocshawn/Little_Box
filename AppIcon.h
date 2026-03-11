@@ -4,9 +4,11 @@
 #include <QFont>
 #include <QIcon>
 #include <QLinearGradient>
+#include <QList>
 #include <QPainter>
 #include <QPixmap>
 #include <QRectF>
+
 
 inline QIcon createAppIcon() {
     QIcon icon;

@@ -89,6 +89,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="FlappyBirdWindow.cpp" />
+    <ClCompile Include="MazeGameWindow.cpp" />
     <ClCompile Include="ShutdownDialog.cpp" />
     <QtMoc Include="MainWindow.h" />
     <ClCompile Include="MainWindow.cpp" />
@@ -100,6 +102,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppIcon.h" />
+    <ClInclude Include="FlappyBirdWindow.h" />
+    <ClInclude Include="MazeGameWindow.h" />
     <ClInclude Include="SystemCommandService.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
