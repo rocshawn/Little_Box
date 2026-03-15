@@ -210,8 +210,13 @@ void FlappyBirdWidget::keyPressEvent(QKeyEvent* event) {
 }
 
 void FlappyBirdWidget::mousePressEvent(QMouseEvent* event) {
-    Q_UNUSED(event);
-    flap();
+    if (event->button() == Qt::LeftButton) {
+        flap();
+        event->accept();
+        return;
+    }
+
+    QWidget::mousePressEvent(event);
 }
 
 void FlappyBirdWidget::resizeEvent(QResizeEvent* event) {
@@ -223,6 +228,10 @@ void FlappyBirdWidget::resizeEvent(QResizeEvent* event) {
 }
 
 void FlappyBirdWidget::advanceFrame() {
+    if (!isVisible()) {
+        return;
+    }
+
     ++frameCounter_;
 
     if (!started_ || gameOver_) {
@@ -292,6 +301,10 @@ void FlappyBirdWidget::flap() {
 }
 
 void FlappyBirdWidget::spawnPipe() {
+    if (width() <= 0 || height() <= 0) {
+        return;
+    }
+
     const qreal playHeight = qMax(320.0, height() - kGroundHeight);
     const qreal gapSize = qMax(132.0, 178.0 - score_ * 2.0);
     const int minGapCenter = static_cast<int>(gapSize / 2.0 + 34.0);

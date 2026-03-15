@@ -146,17 +146,21 @@ void ShutdownDialog::handleConfirmClicked() {
         return;
     }
 
-    if (!SystemCommandService::scheduleShutdown(seconds)) {
-        QMessageBox::critical(this, "创建失败", "无法创建关机计划，请检查系统权限或命令执行状态。");
+    QString errorMessage;
+    if (!SystemCommandService::scheduleShutdown(seconds, &errorMessage)) {
+        const QString detail = errorMessage.isEmpty() ? QStringLiteral("无额外错误信息。") : errorMessage;
+        QMessageBox::critical(this, "创建失败", QString("无法创建关机计划，请检查系统权限或命令执行状态。\n\n详情：%1").arg(detail));
         return;
     }
 
-    QMessageBox::information(this, "创建成功", "定时关机计划已创建。");
+    QMessageBox::information(this, "创建成功", QString("定时关机计划已创建：%1 秒后执行。").arg(seconds));
 }
 
 void ShutdownDialog::handleCancelShutdownClicked() {
-    if (!SystemCommandService::cancelShutdown()) {
-        QMessageBox::warning(this, "取消失败", "当前没有可取消的关机计划，或命令执行失败。");
+    QString errorMessage;
+    if (!SystemCommandService::cancelShutdown(&errorMessage)) {
+        const QString detail = errorMessage.isEmpty() ? QStringLiteral("无额外错误信息。") : errorMessage;
+        QMessageBox::warning(this, "取消失败", QString("当前没有可取消的关机计划，或命令执行失败。\n\n详情：%1").arg(detail));
         return;
     }
 

@@ -33,7 +33,7 @@ MazeBoard::MazeBoard(QWidget* parent)
 }
 
 void MazeBoard::setLevel(const int level) {
-    level_ = level;
+    level_ = std::max(1, level);
     generateLevel();
     setFocus();
 }
@@ -180,6 +180,10 @@ void MazeBoard::tryMove(const int dx, const int dy) {
 }
 
 bool MazeBoard::isOpenCell(const QPoint& cell) const {
+    if (walls_.isEmpty() || walls_.front().isEmpty()) {
+        return false;
+    }
+
     if (cell.y() < 0 || cell.y() >= walls_.size()) {
         return false;
     }
@@ -192,7 +196,8 @@ bool MazeBoard::isOpenCell(const QPoint& cell) const {
 }
 
 int MazeBoard::boardSizeForLevel(const int level) const {
-    return 13 + level * 2;
+    const int safeLevel = std::max(1, level);
+    return 13 + safeLevel * 2;
 }
 
 MazeGameWindow::MazeGameWindow(QWidget* parent)
@@ -288,8 +293,8 @@ void MazeGameWindow::setupConnections() {
 }
 
 void MazeGameWindow::loadLevel(const int level) {
-    currentLevel_ = level;
-    board_->setLevel(level);
+    currentLevel_ = std::max(1, std::min(level, kTotalLevels));
+    board_->setLevel(currentLevel_);
     updateLabels();
     statusBar()->showMessage(QString("第 %1 关已载入，请使用方向键开始移动。").arg(currentLevel_));
 }

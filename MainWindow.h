@@ -1,8 +1,11 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QPointer>
 
 class QPushButton;
+class MazeGameWindow;
+class FlappyBirdWindow;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -29,4 +32,6 @@ private:
     QPushButton* mazeGameButton_{ nullptr };
     QPushButton* flappyBirdButton_{ nullptr };
     QPushButton* fullscreenButton_{ nullptr };
+    QPointer<MazeGameWindow> mazeWindow_{ nullptr };
+    QPointer<FlappyBirdWindow> flappyBirdWindow_{ nullptr };
 };

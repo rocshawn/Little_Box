@@ -27,6 +27,21 @@ constexpr int kInitialWindowWidth = 980;
 constexpr int kInitialWindowHeight = 680;
 constexpr auto kVersionText = "版本 1.1.0";
 constexpr auto kWebsiteUrl = "http://129.226.83.81:8900/";
+
+void bringToFront(QWidget* window) {
+    if (window == nullptr) {
+        return;
+    }
+
+    if (window->isMinimized()) {
+        window->showNormal();
+    } else {
+        window->show();
+    }
+
+    window->raise();
+    window->activateWindow();
+}
 } // namespace
 
 MainWindow::MainWindow(QWidget* parent)
@@ -194,19 +209,21 @@ void MainWindow::openWeddingAdminPage() {
 }
 
 void MainWindow::openMazeGame() {
-    auto* mazeWindow = new MazeGameWindow(this);
-    mazeWindow->setAttribute(Qt::WA_DeleteOnClose);
-    mazeWindow->show();
-    mazeWindow->raise();
-    mazeWindow->activateWindow();
+    if (mazeWindow_.isNull()) {
+        mazeWindow_ = new MazeGameWindow(this);
+        mazeWindow_->setAttribute(Qt::WA_DeleteOnClose);
+    }
+
+    bringToFront(mazeWindow_.data());
 }
 
 void MainWindow::openFlappyBirdGame() {
-    auto* flappyBirdWindow = new FlappyBirdWindow(this);
-    flappyBirdWindow->setAttribute(Qt::WA_DeleteOnClose);
-    flappyBirdWindow->show();
-    flappyBirdWindow->raise();
-    flappyBirdWindow->activateWindow();
+    if (flappyBirdWindow_.isNull()) {
+        flappyBirdWindow_ = new FlappyBirdWindow(this);
+        flappyBirdWindow_->setAttribute(Qt::WA_DeleteOnClose);
+    }
+
+    bringToFront(flappyBirdWindow_.data());
 }
 
 void MainWindow::toggleFullscreen() {
