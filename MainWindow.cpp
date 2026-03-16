@@ -26,7 +26,9 @@ constexpr int kMinimumWindowHeight = 520;
 constexpr int kInitialWindowWidth = 980;
 constexpr int kInitialWindowHeight = 680;
 constexpr auto kVersionText = "版本 1.1.0";
-constexpr auto kWebsiteUrl = "http://129.226.83.81:8900/";
+// The website URL is read from the environment variable `LB_WEBSITE_URL` at runtime
+// to avoid hardcoding sensitive addresses in source control.
+constexpr auto kWebsiteEnvVar = "LB_WEBSITE_URL";
 
 void bringToFront(QWidget* window) {
     if (window == nullptr) {
@@ -201,7 +203,16 @@ void MainWindow::openShutdownDialog() {
 }
 
 void MainWindow::openWeddingAdminPage() {
-    const bool opened = QDesktopServices::openUrl(QUrl(QString::fromUtf8(kWebsiteUrl)));
+    // Read URL from environment variable to avoid embedding it in source code.
+    const QByteArray envUrl = qgetenv(kWebsiteEnvVar);
+    const QString website = QString::fromUtf8(envUrl);
+
+    if (website.isEmpty()) {
+        QMessageBox::warning(this, "打开失败", "未配置网站地址（环境变量 LB_WEBSITE_URL）。");
+        return;
+    }
+
+    const bool opened = QDesktopServices::openUrl(QUrl(website));
 
     if (!opened) {
         QMessageBox::warning(this, "打开失败", "无法使用默认浏览器打开网页。请检查系统浏览器配置。");
