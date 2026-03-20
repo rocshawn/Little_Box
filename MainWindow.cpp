@@ -6,6 +6,9 @@
 
 #include <QColor>
 #include <QDesktopServices>
+#include <QInputDialog>
+#include <QLineEdit>
+#include <QSettings>
 #include <QFrame>
 #include <QGraphicsDropShadowEffect>
 #include <QGridLayout>
@@ -75,7 +78,10 @@ void MainWindow::setupUi() {
 
     fullscreenButton_ = new QPushButton(heroCard);
     shutdownButton_ = new QPushButton("定时关机", heroCard);
-    weddingAdminButton_ = new QPushButton("打开网站", heroCard);
+    // We'll create a combined area for the website button and a small switch button
+    weddingAdminButton_ = new QPushButton(heroCard);
+    weddingAdminButton_->setText("点击输入网址");
+    websiteSwitchButton_ = new QPushButton("⋯", heroCard);
     mazeGameButton_ = new QPushButton("迷宫闯关", heroCard);
     flappyBirdButton_ = new QPushButton("Flappy Bird", heroCard);
 
@@ -89,6 +95,7 @@ void MainWindow::setupUi() {
     fullscreenButton_->setObjectName("ghostButton");
     shutdownButton_->setObjectName("primaryButton");
     weddingAdminButton_->setObjectName("secondaryButton");
+    websiteSwitchButton_->setObjectName("ghostButton");
     mazeGameButton_->setObjectName("featureButton");
     flappyBirdButton_->setObjectName("featureButton");
 
@@ -104,6 +111,8 @@ void MainWindow::setupUi() {
 
     shutdownButton_->setMinimumHeight(58);
     weddingAdminButton_->setMinimumHeight(58);
+    websiteSwitchButton_->setMinimumHeight(58);
+    websiteSwitchButton_->setMaximumWidth(48);
     mazeGameButton_->setMinimumHeight(58);
     flappyBirdButton_->setMinimumHeight(58);
     fullscreenButton_->setMinimumHeight(42);
@@ -119,7 +128,14 @@ void MainWindow::setupUi() {
     headerLayout->addWidget(fullscreenButton_, 0, Qt::AlignTop);
 
     featureGrid->addWidget(shutdownButton_, 0, 0);
-    featureGrid->addWidget(weddingAdminButton_, 0, 1);
+    // Create a container widget that holds the website open button and a small switch button on the right
+    auto* websiteContainer = new QWidget(heroCard);
+    auto* websiteLayout = new QHBoxLayout(websiteContainer);
+    websiteLayout->setContentsMargins(0, 0, 0, 0);
+    websiteLayout->setSpacing(8);
+    websiteLayout->addWidget(weddingAdminButton_);
+    websiteLayout->addWidget(websiteSwitchButton_);
+    featureGrid->addWidget(websiteContainer, 0, 1);
     featureGrid->addWidget(mazeGameButton_, 1, 0);
     featureGrid->addWidget(flappyBirdButton_, 1, 1);
     featureGrid->setHorizontalSpacing(14);
@@ -166,14 +182,23 @@ void MainWindow::setupUi() {
         "QPushButton#featureButton:pressed { background:#eef2ff; }"
         "QPushButton#ghostButton { background:#ffffff; color:#4338ca; border:1px solid #c7d2fe; padding:10px 16px; }"
         "QPushButton#ghostButton:hover { background:#eef2ff; }"
+        "QPushButton#ghostButton { font-weight:700; }"
     );
 
     setCentralWidget(centralWidget);
+
+    // Load persisted website URL (if any)
+    QSettings settings;
+    const QString saved = settings.value("website/url").toString();
+    if (!saved.isEmpty()) {
+        weddingAdminButton_->setText(saved);
+    }
 }
 
 void MainWindow::setupConnections() {
     connect(shutdownButton_, &QPushButton::clicked, this, &MainWindow::openShutdownDialog);
     connect(weddingAdminButton_, &QPushButton::clicked, this, &MainWindow::openWeddingAdminPage);
+    connect(websiteSwitchButton_, &QPushButton::clicked, this, &MainWindow::openWebsiteInputDialog);
     connect(mazeGameButton_, &QPushButton::clicked, this, &MainWindow::openMazeGame);
     connect(flappyBirdButton_, &QPushButton::clicked, this, &MainWindow::openFlappyBirdGame);
     connect(fullscreenButton_, &QPushButton::clicked, this, &MainWindow::toggleFullscreen);
@@ -203,12 +228,18 @@ void MainWindow::openShutdownDialog() {
 }
 
 void MainWindow::openWeddingAdminPage() {
-    // Read URL from environment variable to avoid embedding it in source code.
-    const QByteArray envUrl = qgetenv(kWebsiteEnvVar);
-    const QString website = QString::fromUtf8(envUrl);
+    // Read persisted URL from QSettings first, fall back to environment variable
+    QSettings settings;
+    QString website = settings.value("website/url").toString();
 
     if (website.isEmpty()) {
-        QMessageBox::warning(this, "打开失败", "未配置网站地址（环境变量 LB_WEBSITE_URL）。");
+        const QByteArray envUrl = qgetenv(kWebsiteEnvVar);
+        website = QString::fromUtf8(envUrl);
+    }
+
+    if (website.isEmpty()) {
+        // Prompt user to input the URL if none configured
+        QMessageBox::information(this, "请输入网址", "请先通过右侧按钮输入并保存要打开的网址。\n按钮上会显示“点击输入网址");
         return;
     }
 
@@ -217,6 +248,34 @@ void MainWindow::openWeddingAdminPage() {
     if (!opened) {
         QMessageBox::warning(this, "打开失败", "无法使用默认浏览器打开网页。请检查系统浏览器配置。");
     }
+}
+
+void MainWindow::openWebsiteInputDialog() {
+    QSettings settings;
+    QString current = settings.value("website/url").toString();
+
+    bool ok = false;
+    const QString input = QInputDialog::getText(this, "设置网站地址", "请输入要打开的网站 URL（含 http:// 或 https://）：", QLineEdit::Normal, current, &ok);
+
+    if (!ok) {
+        return;
+    }
+
+    const QString trimmed = input.trimmed();
+    if (trimmed.isEmpty()) {
+        settings.remove("website/url");
+        weddingAdminButton_->setText("点击输入网址");
+        return;
+    }
+
+    // Basic validation
+    if (!(trimmed.startsWith("http://") || trimmed.startsWith("https://"))) {
+        QMessageBox::warning(this, "无效网址", "网址需要以 http:// 或 https:// 开头。");
+        return;
+    }
+
+    settings.setValue("website/url", trimmed);
+    weddingAdminButton_->setText(trimmed);
 }
 
 void MainWindow::openMazeGame() {
