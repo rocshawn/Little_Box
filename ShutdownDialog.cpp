@@ -3,6 +3,8 @@
 #include "SystemCommandService.h"
 
 #include <QColor>
+#include <QDate>
+#include <QDateTime>
 #include <QFrame>
 #include <QGraphicsDropShadowEffect>
 #include <QHBoxLayout>
@@ -11,12 +13,14 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QTime>
 #include <QVBoxLayout>
+
+#include <limits>
 
 namespace {
 constexpr int kDialogWidth = 500;
-constexpr int kDialogHeight = 310;
-constexpr int kMaxSeconds = 315360000; // 10 years
+constexpr int kDialogHeight = 340;
 } // namespace
 
 ShutdownDialog::ShutdownDialog(QWidget* parent)
@@ -34,17 +38,88 @@ void ShutdownDialog::setupUi() {
     auto* contentCard = new QFrame(this);
     auto* mainLayout = new QVBoxLayout(contentCard);
     auto* titleLabel = new QLabel("定时关机", contentCard);
-    auto* descriptionLabel = new QLabel("输入延迟秒数后，系统将在倒计时结束时执行关机。", contentCard);
+    auto* descriptionLabel = new QLabel("选择目标日期时间后，系统会在该时刻自动关机。", contentCard);
 
-    auto* inputLabel = new QLabel("延迟秒数", contentCard);
-    auto* helperLabel = new QLabel("示例：输入 300 表示 5 分钟后关机。", contentCard);
+    auto* inputLabel = new QLabel("目标时间（年 / 月 / 日 / 时 / 分 / 秒）", contentCard);
+    auto* helperLabel = new QLabel("请填写六个时间字段。默认值为当前时间后 5 分钟。", contentCard);
     auto* inputLayout = new QVBoxLayout();
+    auto* dateRowLayout = new QHBoxLayout();
+    auto* timeRowLayout = new QHBoxLayout();
     auto* buttonLayout = new QHBoxLayout();
 
-    secondsEdit_ = new QLineEdit(contentCard);
-    secondsEdit_->setPlaceholderText("请输入正整数秒数，例如 300");
-    secondsEdit_->setValidator(new QIntValidator(1, kMaxSeconds, secondsEdit_));
-    secondsEdit_->setClearButtonEnabled(true);
+    const QDateTime defaultDateTime = QDateTime::currentDateTime().addSecs(5 * 60);
+
+    const QString defaultMonth = QString("%1").arg(defaultDateTime.date().month(), 2, 10, QChar('0'));
+    const QString defaultDay = QString("%1").arg(defaultDateTime.date().day(), 2, 10, QChar('0'));
+    const QString defaultHour = QString("%1").arg(defaultDateTime.time().hour(), 2, 10, QChar('0'));
+    const QString defaultMinute = QString("%1").arg(defaultDateTime.time().minute(), 2, 10, QChar('0'));
+    const QString defaultSecond = QString("%1").arg(defaultDateTime.time().second(), 2, 10, QChar('0'));
+
+    yearEdit_ = new QLineEdit(QString::number(defaultDateTime.date().year()), contentCard);
+    monthEdit_ = new QLineEdit(defaultMonth, contentCard);
+    dayEdit_ = new QLineEdit(defaultDay, contentCard);
+    hourEdit_ = new QLineEdit(defaultHour, contentCard);
+    minuteEdit_ = new QLineEdit(defaultMinute, contentCard);
+    secondEdit_ = new QLineEdit(defaultSecond, contentCard);
+
+    auto* yearUnitLabel = new QLabel("年", contentCard);
+    auto* monthUnitLabel = new QLabel("月", contentCard);
+    auto* dayUnitLabel = new QLabel("日", contentCard);
+    auto* hourSeparatorLabel = new QLabel(":", contentCard);
+    auto* minuteSeparatorLabel = new QLabel(":", contentCard);
+
+    yearUnitLabel->setObjectName("unitLabel");
+    monthUnitLabel->setObjectName("unitLabel");
+    dayUnitLabel->setObjectName("unitLabel");
+    hourSeparatorLabel->setObjectName("separatorLabel");
+    minuteSeparatorLabel->setObjectName("separatorLabel");
+
+    yearEdit_->setValidator(new QIntValidator(1970, 9999, yearEdit_));
+    monthEdit_->setValidator(new QIntValidator(1, 12, monthEdit_));
+    dayEdit_->setValidator(new QIntValidator(1, 31, dayEdit_));
+    hourEdit_->setValidator(new QIntValidator(0, 23, hourEdit_));
+    minuteEdit_->setValidator(new QIntValidator(0, 59, minuteEdit_));
+    secondEdit_->setValidator(new QIntValidator(0, 59, secondEdit_));
+
+    for (auto* edit : { yearEdit_, monthEdit_, dayEdit_, hourEdit_, minuteEdit_, secondEdit_ }) {
+        edit->setAlignment(Qt::AlignCenter);
+        edit->setClearButtonEnabled(false);
+    }
+
+    yearEdit_->setFixedWidth(84);
+    monthEdit_->setFixedWidth(60);
+    dayEdit_->setFixedWidth(60);
+    hourEdit_->setFixedWidth(60);
+    minuteEdit_->setFixedWidth(60);
+    secondEdit_->setFixedWidth(60);
+
+    yearEdit_->setMaxLength(4);
+    monthEdit_->setMaxLength(2);
+    dayEdit_->setMaxLength(2);
+    hourEdit_->setMaxLength(2);
+    minuteEdit_->setMaxLength(2);
+    secondEdit_->setMaxLength(2);
+
+    dateRowLayout->addWidget(yearEdit_);
+    dateRowLayout->addWidget(yearUnitLabel);
+    dateRowLayout->addSpacing(8);
+    dateRowLayout->addWidget(monthEdit_);
+    dateRowLayout->addWidget(monthUnitLabel);
+    dateRowLayout->addSpacing(8);
+    dateRowLayout->addWidget(dayEdit_);
+    dateRowLayout->addWidget(dayUnitLabel);
+    dateRowLayout->addStretch();
+    dateRowLayout->setSpacing(6);
+    dateRowLayout->setContentsMargins(0, 0, 0, 0);
+
+    timeRowLayout->addWidget(hourEdit_);
+    timeRowLayout->addWidget(hourSeparatorLabel);
+    timeRowLayout->addWidget(minuteEdit_);
+    timeRowLayout->addWidget(minuteSeparatorLabel);
+    timeRowLayout->addWidget(secondEdit_);
+    timeRowLayout->addStretch();
+    timeRowLayout->setSpacing(8);
+    timeRowLayout->setContentsMargins(0, 0, 0, 0);
 
     confirmButton_ = new QPushButton("创建计划", contentCard);
     cancelShutdownButton_ = new QPushButton("取消计划", contentCard);
@@ -70,9 +145,10 @@ void ShutdownDialog::setupUi() {
     confirmButton_->setDefault(true);
 
     inputLayout->addWidget(inputLabel);
-    inputLayout->addWidget(secondsEdit_);
+    inputLayout->addLayout(dateRowLayout);
+    inputLayout->addLayout(timeRowLayout);
     inputLayout->addWidget(helperLabel);
-    inputLayout->setSpacing(8);
+    inputLayout->setSpacing(10);
 
     buttonLayout->addWidget(confirmButton_);
     buttonLayout->addWidget(cancelShutdownButton_);
@@ -105,8 +181,10 @@ void ShutdownDialog::setupUi() {
         "QLabel#titleLabel { color:#1e1b4b; font-size:24px; font-weight:800; }"
         "QLabel#descriptionLabel { color:#475569; font-size:14px; margin-top:8px; }"
         "QLabel#inputLabel { color:#312e81; font-size:13px; font-weight:700; margin-top:6px; }"
+        "QLabel#unitLabel { color:#6366f1; font-size:12px; font-weight:700; }"
+        "QLabel#separatorLabel { color:#475569; font-size:16px; font-weight:700; }"
         "QLabel#helperLabel { color:#64748b; font-size:12px; margin-top:8px; }"
-        "QLineEdit { border:1px solid #c7d2fe; border-radius:14px; padding:12px 14px; background:#f8faff; color:#0f172a; }"
+        "QLineEdit { border:1px solid #c7d2fe; border-radius:12px; padding:10px 8px; background:#f8faff; color:#0f172a; }"
         "QLineEdit:focus { border:1px solid #5b5cf0; background:white; }"
         "QPushButton { border-radius:14px; padding:10px 16px; font-size:13px; font-weight:700; }"
         "QPushButton#primaryButton { background:#5b5cf0; color:white; border:none; }"
@@ -123,22 +201,57 @@ void ShutdownDialog::setupConnections() {
     connect(confirmButton_, &QPushButton::clicked, this, &ShutdownDialog::handleConfirmClicked);
     connect(cancelShutdownButton_, &QPushButton::clicked, this, &ShutdownDialog::handleCancelShutdownClicked);
     connect(closeButton_, &QPushButton::clicked, this, &QDialog::accept);
-    connect(secondsEdit_, &QLineEdit::returnPressed, this, &ShutdownDialog::handleConfirmClicked);
 }
 
 void ShutdownDialog::handleConfirmClicked() {
-    bool ok = false;
-    const int seconds = secondsEdit_->text().toInt(&ok);
-    if (!ok || seconds <= 0) {
-        QMessageBox::warning(this, "输入无效", "请输入大于 0 的整数秒数。");
-        secondsEdit_->setFocus();
+    const QDateTime now = QDateTime::currentDateTime();
+
+    bool okYear = false;
+    bool okMonth = false;
+    bool okDay = false;
+    bool okHour = false;
+    bool okMinute = false;
+    bool okSecond = false;
+
+    const int year = yearEdit_->text().toInt(&okYear);
+    const int month = monthEdit_->text().toInt(&okMonth);
+    const int day = dayEdit_->text().toInt(&okDay);
+    const int hour = hourEdit_->text().toInt(&okHour);
+    const int minute = minuteEdit_->text().toInt(&okMinute);
+    const int second = secondEdit_->text().toInt(&okSecond);
+
+    if (!(okYear && okMonth && okDay && okHour && okMinute && okSecond)) {
+        QMessageBox::warning(this, "输入无效", "请完整填写年月日时分秒。");
+        return;
+    }
+
+    const QDate date(year, month, day);
+    const QTime time(hour, minute, second);
+    if (!date.isValid() || !time.isValid()) {
+        QMessageBox::warning(this, "输入无效", "日期或时间不合法，请检查后重试。");
+        return;
+    }
+
+    const QDateTime target(date, time);
+    if (target <= now) {
+        QMessageBox::warning(this, "输入无效", "请选择一个将来的日期时间。");
+        yearEdit_->setFocus();
+        return;
+    }
+
+    const qint64 secondsToShutdown = now.secsTo(target);
+    if (secondsToShutdown > std::numeric_limits<int>::max()) {
+        QMessageBox::warning(this, "输入无效", "选择的时间太远，请设置一个更近的关机时间。");
+        yearEdit_->setFocus();
         return;
     }
 
     const auto result = QMessageBox::question(
         this,
         "确认创建计划",
-        QString("系统将在 %1 秒后关机，是否继续？").arg(seconds),
+        QString("系统将在 %1 自动关机（约 %2 秒后），是否继续？")
+            .arg(target.toString("yyyy-MM-dd HH:mm:ss"))
+            .arg(secondsToShutdown),
         QMessageBox::Yes | QMessageBox::No,
         QMessageBox::No);
 
@@ -147,22 +260,23 @@ void ShutdownDialog::handleConfirmClicked() {
     }
 
     QString errorMessage;
-    if (!SystemCommandService::scheduleShutdown(seconds, &errorMessage)) {
+    if (!SystemCommandService::scheduleShutdown(static_cast<int>(secondsToShutdown), &errorMessage)) {
         const QString detail = errorMessage.isEmpty() ? QStringLiteral("无额外错误信息。") : errorMessage;
         QMessageBox::critical(this, "创建失败", QString("无法创建关机计划，请检查系统权限或命令执行状态。\n\n详情：%1").arg(detail));
         return;
     }
 
-    QMessageBox::information(this, "创建成功", QString("定时关机计划已创建：%1 秒后执行。").arg(seconds));
+    hasScheduledPlan_ = true;
+    QMessageBox::information(this, "创建成功", QString("定时关机计划已创建：%1。").arg(target.toString("yyyy-MM-dd HH:mm:ss")));
 }
 
 void ShutdownDialog::handleCancelShutdownClicked() {
     QString errorMessage;
-    if (!SystemCommandService::cancelShutdown(&errorMessage)) {
-        const QString detail = errorMessage.isEmpty() ? QStringLiteral("无额外错误信息。") : errorMessage;
-        QMessageBox::warning(this, "取消失败", QString("当前没有可取消的关机计划，或命令执行失败。\n\n详情：%1").arg(detail));
+    const bool canceled = SystemCommandService::cancelShutdown(&errorMessage);
+    if (!hasScheduledPlan_ && !canceled) {
         return;
     }
 
+    hasScheduledPlan_ = false;
     QMessageBox::information(this, "已取消", "定时关机计划已取消。");
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QDialog>
+#include <QDateTime>
 
 class QLineEdit;
 class QPushButton;
@@ -20,8 +21,14 @@ private:
     void setupUi();
     void setupConnections();
 
-    QLineEdit* secondsEdit_{ nullptr };
+    QLineEdit* yearEdit_{ nullptr };
+    QLineEdit* monthEdit_{ nullptr };
+    QLineEdit* dayEdit_{ nullptr };
+    QLineEdit* hourEdit_{ nullptr };
+    QLineEdit* minuteEdit_{ nullptr };
+    QLineEdit* secondEdit_{ nullptr };
     QPushButton* confirmButton_{ nullptr };
     QPushButton* cancelShutdownButton_{ nullptr };
     QPushButton* closeButton_{ nullptr };
+    bool hasScheduledPlan_{ false };
 };
