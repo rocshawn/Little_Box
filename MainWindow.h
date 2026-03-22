@@ -6,6 +6,7 @@
 class QPushButton;
 class MazeGameWindow;
 class FlappyBirdWindow;
+class ReactionTestWindow;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -20,6 +21,7 @@ private slots:
     void openWebsiteInputDialog();
     void openMazeGame();
     void openFlappyBirdGame();
+    void openReactionTest();
     void toggleFullscreen();
 
 private:
@@ -33,7 +35,9 @@ private:
     QPushButton* websiteSwitchButton_{ nullptr };
     QPushButton* mazeGameButton_{ nullptr };
     QPushButton* flappyBirdButton_{ nullptr };
+    QPushButton* reactionTestButton_{ nullptr };
     QPushButton* fullscreenButton_{ nullptr };
     QPointer<MazeGameWindow> mazeWindow_{ nullptr };
     QPointer<FlappyBirdWindow> flappyBirdWindow_{ nullptr };
+    QPointer<ReactionTestWindow> reactionTestWindow_{ nullptr };
 };

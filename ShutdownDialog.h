@@ -1,9 +1,11 @@
 #pragma once
 
-#include <QDialog>
 #include <QDateTime>
+#include <QDialog>
 
 class QLineEdit;
+class QDateTimeEdit;
+class QTimer;
 class QPushButton;
 
 class ShutdownDialog final : public QDialog {
@@ -16,19 +18,17 @@ public:
 private slots:
     void handleConfirmClicked();
     void handleCancelShutdownClicked();
+    void handleWatchTimer();
 
 private:
     void setupUi();
     void setupConnections();
 
-    QLineEdit* yearEdit_{ nullptr };
-    QLineEdit* monthEdit_{ nullptr };
-    QLineEdit* dayEdit_{ nullptr };
-    QLineEdit* hourEdit_{ nullptr };
-    QLineEdit* minuteEdit_{ nullptr };
-    QLineEdit* secondEdit_{ nullptr };
+    QLineEdit* secondsEdit_{ nullptr };
+    QDateTimeEdit* dateTimeEdit_{ nullptr };
     QPushButton* confirmButton_{ nullptr };
     QPushButton* cancelShutdownButton_{ nullptr };
     QPushButton* closeButton_{ nullptr };
-    bool hasScheduledPlan_{ false };
+    QTimer* watchTimer_{ nullptr };
+    QDateTime scheduledTime_;
 };

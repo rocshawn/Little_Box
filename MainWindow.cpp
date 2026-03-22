@@ -2,6 +2,7 @@
 
 #include "FlappyBirdWindow.h"
 #include "MazeGameWindow.h"
+#include "ReactionTestWindow.h"
 #include "ShutdownDialog.h"
 
 #include <QColor>
@@ -74,7 +75,7 @@ void MainWindow::setupUi() {
     auto* titleLabel = new QLabel("Little Box 工具箱", heroCard);
     auto* subtitleLabel = new QLabel("统一的桌面轻工具与休闲游戏入口", heroCard);
     auto* featureLabel = new QLabel("支持自由调整窗口大小、全屏切换，以及轻量工具与小游戏功能。", heroCard);
-    auto* highlightLabel = new QLabel("当前提供四项功能：定时关机、打开网站、迷宫闯关、Flappy Bird。", heroCard);
+    auto* highlightLabel = new QLabel("当前提供五项功能：定时关机、打开网站、迷宫闯关、Flappy Bird、反应能力测试。", heroCard);
 
     fullscreenButton_ = new QPushButton(heroCard);
     shutdownButton_ = new QPushButton("定时关机", heroCard);
@@ -84,6 +85,7 @@ void MainWindow::setupUi() {
     websiteSwitchButton_ = new QPushButton("⋯", heroCard);
     mazeGameButton_ = new QPushButton("迷宫闯关", heroCard);
     flappyBirdButton_ = new QPushButton("Flappy Bird", heroCard);
+    reactionTestButton_ = new QPushButton("反应速度测试", heroCard);
 
     centralWidget->setObjectName("centralWidget");
     heroCard->setObjectName("heroCard");
@@ -98,6 +100,7 @@ void MainWindow::setupUi() {
     websiteSwitchButton_->setObjectName("ghostButton");
     mazeGameButton_->setObjectName("featureButton");
     flappyBirdButton_->setObjectName("featureButton");
+    reactionTestButton_->setObjectName("featureButton");
 
     logoBadge->setAlignment(Qt::AlignCenter);
     logoBadge->setFixedSize(78, 78);
@@ -105,7 +108,7 @@ void MainWindow::setupUi() {
     featureLabel->setWordWrap(true);
     highlightLabel->setWordWrap(true);
 
-    for (auto* button : { fullscreenButton_, shutdownButton_, weddingAdminButton_, mazeGameButton_, flappyBirdButton_ }) {
+    for (auto* button : { fullscreenButton_, shutdownButton_, weddingAdminButton_, mazeGameButton_, flappyBirdButton_, reactionTestButton_ }) {
         button->setCursor(Qt::PointingHandCursor);
     }
 
@@ -115,6 +118,7 @@ void MainWindow::setupUi() {
     websiteSwitchButton_->setMaximumWidth(48);
     mazeGameButton_->setMinimumHeight(58);
     flappyBirdButton_->setMinimumHeight(58);
+    reactionTestButton_->setMinimumHeight(58);
     fullscreenButton_->setMinimumHeight(42);
     fullscreenButton_->setMinimumWidth(128);
 
@@ -138,6 +142,7 @@ void MainWindow::setupUi() {
     featureGrid->addWidget(websiteContainer, 0, 1);
     featureGrid->addWidget(mazeGameButton_, 1, 0);
     featureGrid->addWidget(flappyBirdButton_, 1, 1);
+    featureGrid->addWidget(reactionTestButton_, 2, 0, 1, 2);
     featureGrid->setHorizontalSpacing(14);
     featureGrid->setVerticalSpacing(14);
 
@@ -201,6 +206,7 @@ void MainWindow::setupConnections() {
     connect(websiteSwitchButton_, &QPushButton::clicked, this, &MainWindow::openWebsiteInputDialog);
     connect(mazeGameButton_, &QPushButton::clicked, this, &MainWindow::openMazeGame);
     connect(flappyBirdButton_, &QPushButton::clicked, this, &MainWindow::openFlappyBirdGame);
+    connect(reactionTestButton_, &QPushButton::clicked, this, &MainWindow::openReactionTest);
     connect(fullscreenButton_, &QPushButton::clicked, this, &MainWindow::toggleFullscreen);
 
     auto* fullscreenShortcut = new QShortcut(QKeySequence(Qt::Key_F11), this);
@@ -239,14 +245,24 @@ void MainWindow::openWeddingAdminPage() {
 
     if (website.isEmpty()) {
         // Prompt user to input the URL if none configured
-        QMessageBox::information(this, "请输入网址", "请先通过右侧按钮输入并保存要打开的网址。\n按钮上会显示“点击输入网址");
+        QMessageBox::information(
+            this,
+            QStringLiteral("请输入网址"),
+            QStringLiteral("请先通过右侧按钮输入并保存要打开的网址。\n按钮上会显示“点击输入网址”。"),
+            QMessageBox::Ok
+        );
         return;
     }
 
     const bool opened = QDesktopServices::openUrl(QUrl(website));
 
     if (!opened) {
-        QMessageBox::warning(this, "打开失败", "无法使用默认浏览器打开网页。请检查系统浏览器配置。");
+        QMessageBox::warning(
+            this,
+            QStringLiteral("打开失败"),
+            QStringLiteral("无法使用默认浏览器打开网页。请检查系统浏览器配置。"),
+            QMessageBox::Ok
+        );
     }
 }
 
@@ -270,7 +286,12 @@ void MainWindow::openWebsiteInputDialog() {
 
     // Basic validation
     if (!(trimmed.startsWith("http://") || trimmed.startsWith("https://"))) {
-        QMessageBox::warning(this, "无效网址", "网址需要以 http:// 或 https:// 开头。");
+        QMessageBox::warning(
+            this,
+            QStringLiteral("无效网址"),
+            QStringLiteral("网址需要以 http:// 或 https:// 开头。"),
+            QMessageBox::Ok
+        );
         return;
     }
 
@@ -294,6 +315,15 @@ void MainWindow::openFlappyBirdGame() {
     }
 
     bringToFront(flappyBirdWindow_.data());
+}
+
+void MainWindow::openReactionTest() {
+    if (reactionTestWindow_.isNull()) {
+        reactionTestWindow_ = new ReactionTestWindow(this);
+        reactionTestWindow_->setAttribute(Qt::WA_DeleteOnClose);
+    }
+
+    bringToFront(reactionTestWindow_.data());
 }
 
 void MainWindow::toggleFullscreen() {

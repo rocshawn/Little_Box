@@ -91,6 +91,8 @@
   <ItemGroup>
     <ClCompile Include="FlappyBirdWindow.cpp" />
     <ClCompile Include="MazeGameWindow.cpp" />
+    <ClCompile Include="ReactionTestWindow.cpp" />
+    <ClCompile Include="ReactionTestWidget.cpp" />
     <ClCompile Include="ShutdownDialog.cpp" />
     <QtMoc Include="MainWindow.h" />
     <ClCompile Include="MainWindow.cpp" />
@@ -104,6 +106,8 @@
     <ClInclude Include="AppIcon.h" />
     <ClInclude Include="FlappyBirdWindow.h" />
     <ClInclude Include="MazeGameWindow.h" />
+    <ClInclude Include="ReactionTestWindow.h" />
+    <ClInclude Include="ReactionTestWidget.h" />
     <ClInclude Include="SystemCommandService.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
