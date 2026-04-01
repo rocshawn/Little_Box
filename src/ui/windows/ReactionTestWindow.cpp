@@ -1,6 +1,6 @@
 #include "ReactionTestWindow.h"
 
-#include "ReactionTestWidget.h"
+#include "../widgets/ReactionTestWidget.h"
 
 #include <QColor>
 #include <QFrame>

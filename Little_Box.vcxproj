@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ***************************************************************************************************
  Copyright (C) 2023 The Qt Company Ltd.
@@ -70,6 +70,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -82,6 +83,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DebugInformationFormat>None</DebugInformationFormat>
       <Optimization>MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories>$(ProjectDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -89,26 +91,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="FlappyBirdWindow.cpp" />
-    <ClCompile Include="MazeGameWindow.cpp" />
-    <ClCompile Include="ReactionTestWindow.cpp" />
-    <ClCompile Include="ReactionTestWidget.cpp" />
-    <ClCompile Include="ShutdownDialog.cpp" />
-    <QtMoc Include="MainWindow.h" />
-    <ClCompile Include="MainWindow.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="SystemCommandService.cpp" />
+    <ClCompile Include="src\ui\windows\FlappyBirdWindow.cpp" />
+    <ClCompile Include="src\ui\windows\MazeGameWindow.cpp" />
+    <ClCompile Include="src\ui\windows\ReactionTestWindow.cpp" />
+    <ClCompile Include="src\ui\widgets\ReactionTestWidget.cpp" />
+    <ClCompile Include="src\ui\dialogs\ShutdownDialog.cpp" />
+    <QtMoc Include="src\ui\windows\MainWindow.h" />
+    <ClCompile Include="src\ui\windows\MainWindow.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\services\SystemCommandService.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="ShutdownDialog.h" />
+    <QtMoc Include="src\ui\dialogs\ShutdownDialog.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AppIcon.h" />
-    <ClInclude Include="FlappyBirdWindow.h" />
-    <ClInclude Include="MazeGameWindow.h" />
-    <ClInclude Include="ReactionTestWindow.h" />
-    <ClInclude Include="ReactionTestWidget.h" />
-    <ClInclude Include="SystemCommandService.h" />
+    <ClInclude Include="src\resources\AppIcon.h" />
+    <ClInclude Include="src\ui\windows\FlappyBirdWindow.h" />
+    <ClInclude Include="src\ui\windows\MazeGameWindow.h" />
+    <ClInclude Include="src\ui\windows\ReactionTestWindow.h" />
+    <ClInclude Include="src\ui\widgets\ReactionTestWidget.h" />
+    <ClInclude Include="src\services\SystemCommandService.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

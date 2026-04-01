@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source Files">
@@ -9,62 +9,95 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-
+    <Filter Include="Source Files\ui">
+      <UniqueIdentifier>{a1b2c3d4-e5f6-4a5b-b6c7-d8e9f0a1b2c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ui\windows">
+      <UniqueIdentifier>{b2c3d4e5-f6a7-4b6c-c7d8-e9f0a1b2c3d4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ui\widgets">
+      <UniqueIdentifier>{c3d4e5f6-a7b8-4c7d-d8e9-f0a1b2c3d4e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ui\dialogs">
+      <UniqueIdentifier>{d4e5f6a7-b8c9-4d8e-e9f0-a1b2c3d4e5f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\services">
+      <UniqueIdentifier>{e5f6a7b8-c9d0-4e9f-f0a1-a1b2c3d4e5f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\resources">
+      <UniqueIdentifier>{f6a7b8c9-d0e1-4f0e-a1b2-b1c2d3e4f5a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ui">
+      <UniqueIdentifier>{1a2b3c4d-5e6f-4a5b-b6c7-d8e9f0a1b2c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ui\windows">
+      <UniqueIdentifier>{2b3c4d5e-6f7a-4b6c-c7d8-e9f0a1b2c3d4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ui\widgets">
+      <UniqueIdentifier>{3c4d5e6f-7a8b-4c7d-d8e9-f0a1b2c3d4e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ui\dialogs">
+      <UniqueIdentifier>{4d5e6f7a-8b9c-4d8e-e9f0-a1b2c3d4e5f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\services">
+      <UniqueIdentifier>{5e6f7a8b-9c0d-4e9f-f0a1-a1b2c3d4e5f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\resources">
+      <UniqueIdentifier>{6f7a8b9c-0d1e-4f0e-a1b2-b1c2d3e4f5a6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="MainWindow.h">
-      <Filter>Header Files</Filter>
+    <QtMoc Include="src\ui\windows\MainWindow.h">
+      <Filter>Header Files\ui\windows</Filter>
     </QtMoc>
-    <ClCompile Include="MainWindow.cpp">
+    <ClCompile Include="src\ui\windows\MainWindow.cpp">
+      <Filter>Source Files\ui\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\dialogs\ShutdownDialog.cpp">
+      <Filter>Source Files\ui\dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="src\services\SystemCommandService.cpp">
+      <Filter>Source Files\services</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\windows\MazeGameWindow.cpp">
+      <Filter>Source Files\ui\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\windows\FlappyBirdWindow.cpp">
+      <Filter>Source Files\ui\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\widgets\ReactionTestWidget.cpp">
+      <Filter>Source Files\ui\widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\windows\ReactionTestWindow.cpp">
+      <Filter>Source Files\ui\windows</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ShutdownDialog.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SystemCommandService.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MazeGameWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="FlappyBirdWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ReactionTestWidget.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ReactionTestWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <QtMoc Include="ShutdownDialog.h">
-      <Filter>Header Files</Filter>
+    <QtMoc Include="src\ui\dialogs\ShutdownDialog.h">
+      <Filter>Header Files\ui\dialogs</Filter>
     </QtMoc>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AppIcon.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\resources\AppIcon.h">
+      <Filter>Header Files\resources</Filter>
     </ClInclude>
-    <ClInclude Include="FlappyBirdWindow.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\ui\windows\FlappyBirdWindow.h">
+      <Filter>Header Files\ui\windows</Filter>
     </ClInclude>
-    <ClInclude Include="MazeGameWindow.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\ui\windows\MazeGameWindow.h">
+      <Filter>Header Files\ui\windows</Filter>
     </ClInclude>
-    <ClInclude Include="SystemCommandService.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\services\SystemCommandService.h">
+      <Filter>Header Files\services</Filter>
     </ClInclude>
-    <ClInclude Include="ReactionTestWidget.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\ui\widgets\ReactionTestWidget.h">
+      <Filter>Header Files\ui\widgets</Filter>
     </ClInclude>
-    <ClInclude Include="ReactionTestWindow.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="src\ui\windows\ReactionTestWindow.h">
+      <Filter>Header Files\ui\windows</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

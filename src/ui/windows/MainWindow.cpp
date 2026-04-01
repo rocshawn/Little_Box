@@ -3,7 +3,7 @@
 #include "FlappyBirdWindow.h"
 #include "MazeGameWindow.h"
 #include "ReactionTestWindow.h"
-#include "ShutdownDialog.h"
+#include "../dialogs/ShutdownDialog.h"
 
 #include <QColor>
 #include <QDesktopServices>

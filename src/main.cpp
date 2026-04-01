@@ -1,7 +1,7 @@
 #include <QApplication>
 
-#include "AppIcon.h"
-#include "MainWindow.h"
+#include "resources/AppIcon.h"
+#include "ui/windows/MainWindow.h"
 
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);

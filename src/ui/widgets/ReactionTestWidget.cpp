@@ -90,6 +90,7 @@ void ReactionTestWidget::paintEvent(QPaintEvent* event) {
     infoFont.setPointSize(10);
     infoFont.setBold(false);
     painter.setFont(infoFont);
+    painter.setPen(Qt::white);
     painter.drawText(progressRect, Qt::AlignCenter, buildProgressText());
     painter.drawText(historyRect, Qt::AlignCenter, buildRoundHistoryText());
 

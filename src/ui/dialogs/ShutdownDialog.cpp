@@ -1,6 +1,6 @@
 #include "ShutdownDialog.h"
 
-#include "SystemCommandService.h"
+#include "../../services/SystemCommandService.h"
 
 #include <QColor>
 #include <QFrame>
