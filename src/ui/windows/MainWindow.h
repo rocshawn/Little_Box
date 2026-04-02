@@ -1,12 +1,13 @@
 #pragma once
 
-#include <QMainWindow>
-#include <QPointer>
+#include "../../core/ModuleInfo.h"
 
-class QPushButton;
-class MazeGameWindow;
-class FlappyBirdWindow;
-class ReactionTestWindow;
+#include <QMainWindow>
+
+class QLabel;
+class QWidget;
+class ModuleCardGrid;
+class Sidebar;
 
 class MainWindow final : public QMainWindow {
     Q_OBJECT
@@ -16,12 +17,10 @@ public:
     ~MainWindow() override = default;
 
 private slots:
-    void openShutdownDialog();
-    void openWeddingAdminPage();
-    void openWebsiteInputDialog();
-    void openMazeGame();
-    void openFlappyBirdGame();
-    void openReactionTest();
+    void onCategoryChanged(ModuleCategory category);
+    void onModuleClicked(const QString& id);
+    void onSettingsRequested();
+    void onThemeChanged(bool dark);
     void toggleFullscreen();
 
 private:
@@ -29,15 +28,14 @@ private:
     void setupConnections();
     void setupStatusBar();
     void updateWindowModeUi();
+    void refreshModuleGrid(ModuleCategory category);
+    void applyThemeStylesheet();
 
-    QPushButton* shutdownButton_{ nullptr };
-    QPushButton* weddingAdminButton_{ nullptr };
-    QPushButton* websiteSwitchButton_{ nullptr };
-    QPushButton* mazeGameButton_{ nullptr };
-    QPushButton* flappyBirdButton_{ nullptr };
-    QPushButton* reactionTestButton_{ nullptr };
-    QPushButton* fullscreenButton_{ nullptr };
-    QPointer<MazeGameWindow> mazeWindow_{ nullptr };
-    QPointer<FlappyBirdWindow> flappyBirdWindow_{ nullptr };
-    QPointer<ReactionTestWindow> reactionTestWindow_{ nullptr };
+    Sidebar*        sidebar_{ nullptr };
+    ModuleCardGrid* cardGrid_{ nullptr };
+    QWidget*        contentArea_{ nullptr };
+    QLabel*         headerTitleLabel_{ nullptr };
+    QLabel*         headerSubtitleLabel_{ nullptr };
+
+    ModuleCategory  currentCategory_{ ModuleCategory::Tools };
 };

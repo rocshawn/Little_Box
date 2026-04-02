@@ -9,6 +9,9 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
+    <Filter Include="Source Files\core">
+      <UniqueIdentifier>{a0b1c2d3-e4f5-4a6b-b7c8-d9e0f1a2b3c4}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files\ui">
       <UniqueIdentifier>{a1b2c3d4-e5f6-4a5b-b6c7-d8e9f0a1b2c3}</UniqueIdentifier>
     </Filter>
@@ -26,6 +29,9 @@
     </Filter>
     <Filter Include="Source Files\resources">
       <UniqueIdentifier>{f6a7b8c9-d0e1-4f0e-a1b2-b1c2d3e4f5a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\core">
+      <UniqueIdentifier>{0a1b2c3d-4e5f-4a6b-b7c8-d9e0f1a2b3c4}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\ui">
       <UniqueIdentifier>{1a2b3c4d-5e6f-4a5b-b6c7-d8e9f0a1b2c3}</UniqueIdentifier>
@@ -47,6 +53,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\core\ModuleRegistry.cpp">
+      <Filter>Source Files\core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\ThemeManager.cpp">
+      <Filter>Source Files\core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\dialogs\SettingsDialog.cpp">
+      <Filter>Source Files\ui\dialogs</Filter>
+    </ClCompile>
     <QtMoc Include="src\ui\windows\MainWindow.h">
       <Filter>Header Files\ui\windows</Filter>
     </QtMoc>
@@ -68,19 +83,49 @@
     <ClCompile Include="src\ui\windows\FlappyBirdWindow.cpp">
       <Filter>Source Files\ui\windows</Filter>
     </ClCompile>
+    <ClCompile Include="src\ui\windows\PomodoroWindow.cpp">
+      <Filter>Source Files\ui\windows</Filter>
+    </ClCompile>
     <ClCompile Include="src\ui\widgets\ReactionTestWidget.cpp">
       <Filter>Source Files\ui\widgets</Filter>
     </ClCompile>
     <ClCompile Include="src\ui\windows\ReactionTestWindow.cpp">
       <Filter>Source Files\ui\windows</Filter>
     </ClCompile>
+    <ClCompile Include="src\ui\widgets\Sidebar.cpp">
+      <Filter>Source Files\ui\widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\widgets\ModuleCardGrid.cpp">
+      <Filter>Source Files\ui\widgets</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="src\core\ThemeManager.h">
+      <Filter>Header Files\core</Filter>
+    </QtMoc>
+    <QtMoc Include="src\ui\dialogs\SettingsDialog.h">
+      <Filter>Header Files\ui\dialogs</Filter>
+    </QtMoc>
     <QtMoc Include="src\ui\dialogs\ShutdownDialog.h">
       <Filter>Header Files\ui\dialogs</Filter>
     </QtMoc>
+    <QtMoc Include="src\ui\widgets\Sidebar.h">
+      <Filter>Header Files\ui\widgets</Filter>
+    </QtMoc>
+    <QtMoc Include="src\ui\widgets\ModuleCardGrid.h">
+      <Filter>Header Files\ui\widgets</Filter>
+    </QtMoc>
+    <QtMoc Include="src\ui\windows\PomodoroWindow.h">
+      <Filter>Header Files\ui\windows</Filter>
+    </QtMoc>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\core\ModuleInfo.h">
+      <Filter>Header Files\core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\ModuleRegistry.h">
+      <Filter>Header Files\core</Filter>
+    </ClInclude>
     <ClInclude Include="src\resources\AppIcon.h">
       <Filter>Header Files\resources</Filter>
     </ClInclude>

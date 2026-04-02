@@ -1,62 +1,97 @@
 #include "MainWindow.h"
 
-#include "FlappyBirdWindow.h"
-#include "MazeGameWindow.h"
-#include "ReactionTestWindow.h"
-#include "../dialogs/ShutdownDialog.h"
+#include "../../core/ModuleRegistry.h"
+#include "../../core/ThemeManager.h"
+#include "../dialogs/SettingsDialog.h"
+#include "../widgets/ModuleCardGrid.h"
+#include "../widgets/Sidebar.h"
 
 #include <QColor>
-#include <QDesktopServices>
-#include <QInputDialog>
-#include <QLineEdit>
-#include <QSettings>
 #include <QFrame>
 #include <QGraphicsDropShadowEffect>
-#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QKeySequence>
 #include <QLabel>
-#include <QMessageBox>
 #include <QPushButton>
 #include <QShortcut>
 #include <QStatusBar>
-#include <QUrl>
 #include <QVBoxLayout>
 #include <QWidget>
 
 namespace {
-constexpr int kMinimumWindowWidth = 760;
-constexpr int kMinimumWindowHeight = 520;
-constexpr int kInitialWindowWidth = 980;
-constexpr int kInitialWindowHeight = 680;
-constexpr auto kVersionText = "版本 1.1.0";
-// The website URL is read from the environment variable `LB_WEBSITE_URL` at runtime
-// to avoid hardcoding sensitive addresses in source control.
-constexpr auto kWebsiteEnvVar = "LB_WEBSITE_URL";
+constexpr int kMinimumWindowWidth  = 820;
+constexpr int kMinimumWindowHeight = 560;
+constexpr int kInitialWindowWidth  = 1020;
+constexpr int kInitialWindowHeight = 700;
+constexpr auto kVersionText = "版本 1.2.0";
 
-void bringToFront(QWidget* window) {
-    if (window == nullptr) {
-        return;
+QString categoryDescription(const ModuleCategory category) {
+    switch (category) {
+    case ModuleCategory::Tools:     return "系统实用功能，帮你高效完成日常任务";
+    case ModuleCategory::Games:     return "轻松休闲的小游戏，随时随地玩一把";
+    case ModuleCategory::Challenge: return "测量和锻炼你的能力，不断突破自我";
     }
-
-    if (window->isMinimized()) {
-        window->showNormal();
-    } else {
-        window->show();
-    }
-
-    window->raise();
-    window->activateWindow();
+    return {};
 }
+
+const char* const kLightContentStyleSheet =
+    "QWidget#contentArea {"
+    "  background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #fffaff, stop:1 #fff1f2);"
+    "}"
+    "QFrame#headerCard { background:white; border:2px solid #ffe4e6; border-radius:28px; }"
+    "QLabel#headerLogoBadge {"
+    "  background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #fb7185, stop:1 #f43f5e);"
+    "  color:white; border-radius:26px; font-size:20px; font-weight:800;"
+    "}"
+    "QLabel#headerTitle  { color:#4c0519; font-size:26px; font-weight:800; }"
+    "QLabel#headerSubtitle { color:#fb7185; font-size:14px; font-weight:600; }"
+    "QPushButton#ghostButton {"
+    "  background:#ffffff; color:#fb7185; border:2px solid #ffe4e6;"
+    "  border-radius:18px; padding:8px 16px; font-size:13px; font-weight:700;"
+    "}"
+    "QPushButton#ghostButton:hover { background:#fff1f2; border-color:#fda4af; }";
+
+const char* const kDarkContentStyleSheet =
+    "QWidget#contentArea {"
+    "  background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #1a0b1c, stop:1 #2d142c);"
+    "}"
+    "QFrame#headerCard { background:#3a1c36; border:2px solid #5e2c56; border-radius:28px; }"
+    "QLabel#headerLogoBadge {"
+    "  background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #e11d48, stop:1 #9f1239);"
+    "  color:white; border-radius:26px; font-size:20px; font-weight:800;"
+    "}"
+    "QLabel#headerTitle  { color:#fff0f2; font-size:26px; font-weight:800; }"
+    "QLabel#headerSubtitle { color:#fbcfe8; font-size:14px; font-weight:600; }"
+    "QPushButton#ghostButton {"
+    "  background:#3a1c36; color:#fbcfe8; border:2px solid #5e2c56;"
+    "  border-radius:18px; padding:8px 16px; font-size:13px; font-weight:700;"
+    "}"
+    "QPushButton#ghostButton:hover { background:#5e2c56; border-color:#83386d; }";
+
+const char* const kLightStatusBarStyleSheet =
+    "QStatusBar { background:white; color:#475569; border-top:1px solid #e2e8f0; }";
+
+const char* const kDarkStatusBarStyleSheet =
+    "QStatusBar { background:#0f172a; color:#64748b; border-top:1px solid #1e293b; }";
 } // namespace
+
+
+// ── Constructor ───────────────────────────────────────────────────────────────
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent) {
+
+    ModuleRegistry::instance().registerBuiltinModules();
+
     setupUi();
     setupConnections();
     setupStatusBar();
+    applyThemeStylesheet();
+    refreshModuleGrid(ModuleCategory::Tools);
     updateWindowModeUi();
 }
+
+// ── Setup ─────────────────────────────────────────────────────────────────────
 
 void MainWindow::setupUi() {
     setWindowTitle("Little Box 工具箱");
@@ -64,150 +99,92 @@ void MainWindow::setupUi() {
     resize(kInitialWindowWidth, kInitialWindowHeight);
 
     auto* centralWidget = new QWidget(this);
-    auto* rootLayout = new QVBoxLayout(centralWidget);
-    auto* heroCard = new QFrame(centralWidget);
-    auto* heroLayout = new QVBoxLayout(heroCard);
-    auto* headerLayout = new QHBoxLayout();
-    auto* titleLayout = new QVBoxLayout();
-    auto* featureGrid = new QGridLayout();
+    auto* rootLayout = new QHBoxLayout(centralWidget);
+    rootLayout->setContentsMargins(0, 0, 0, 0);
+    rootLayout->setSpacing(0);
 
-    auto* logoBadge = new QLabel("LB", heroCard);
-    auto* titleLabel = new QLabel("Little Box 工具箱", heroCard);
-    auto* subtitleLabel = new QLabel("统一的桌面轻工具与休闲游戏入口", heroCard);
-    auto* featureLabel = new QLabel("支持自由调整窗口大小、全屏切换，以及轻量工具与小游戏功能。", heroCard);
-    auto* highlightLabel = new QLabel("当前提供五项功能：定时关机、打开网站、迷宫闯关、Flappy Bird、反应能力测试。", heroCard);
+    // ── Sidebar ──────────────────────────────────────────────────────────
 
-    fullscreenButton_ = new QPushButton(heroCard);
-    shutdownButton_ = new QPushButton("定时关机", heroCard);
-    // We'll create a combined area for the website button and a small switch button
-    weddingAdminButton_ = new QPushButton(heroCard);
-    weddingAdminButton_->setText("点击输入网址");
-    websiteSwitchButton_ = new QPushButton("⋯", heroCard);
-    mazeGameButton_ = new QPushButton("迷宫闯关", heroCard);
-    flappyBirdButton_ = new QPushButton("Flappy Bird", heroCard);
-    reactionTestButton_ = new QPushButton("反应速度测试", heroCard);
+    sidebar_ = new Sidebar(centralWidget);
 
-    centralWidget->setObjectName("centralWidget");
-    heroCard->setObjectName("heroCard");
-    logoBadge->setObjectName("logoBadge");
-    titleLabel->setObjectName("titleLabel");
-    subtitleLabel->setObjectName("subtitleLabel");
-    featureLabel->setObjectName("featureLabel");
-    highlightLabel->setObjectName("highlightLabel");
-    fullscreenButton_->setObjectName("ghostButton");
-    shutdownButton_->setObjectName("primaryButton");
-    weddingAdminButton_->setObjectName("secondaryButton");
-    websiteSwitchButton_->setObjectName("ghostButton");
-    mazeGameButton_->setObjectName("featureButton");
-    flappyBirdButton_->setObjectName("featureButton");
-    reactionTestButton_->setObjectName("featureButton");
+    // ── Content area ─────────────────────────────────────────────────────
 
+    contentArea_ = new QWidget(centralWidget);
+    contentArea_->setObjectName("contentArea");
+    auto* contentLayout = new QVBoxLayout(contentArea_);
+    contentLayout->setContentsMargins(32, 28, 32, 12);
+    contentLayout->setSpacing(0);
+
+    // Header card
+    auto* headerCard = new QFrame(contentArea_);
+    headerCard->setObjectName("headerCard");
+    auto* headerLayout = new QVBoxLayout(headerCard);
+    headerLayout->setContentsMargins(28, 24, 28, 24);
+    headerLayout->setSpacing(6);
+
+    auto* topRow = new QHBoxLayout();
+
+    auto* logoBadge = new QLabel("LB", headerCard);
+    logoBadge->setObjectName("headerLogoBadge");
     logoBadge->setAlignment(Qt::AlignCenter);
-    logoBadge->setFixedSize(78, 78);
-    subtitleLabel->setWordWrap(true);
-    featureLabel->setWordWrap(true);
-    highlightLabel->setWordWrap(true);
+    logoBadge->setFixedSize(52, 52);
 
-    for (auto* button : { fullscreenButton_, shutdownButton_, weddingAdminButton_, mazeGameButton_, flappyBirdButton_, reactionTestButton_ }) {
-        button->setCursor(Qt::PointingHandCursor);
-    }
+    auto* titleBlock = new QVBoxLayout();
 
-    shutdownButton_->setMinimumHeight(58);
-    weddingAdminButton_->setMinimumHeight(58);
-    websiteSwitchButton_->setMinimumHeight(58);
-    websiteSwitchButton_->setMaximumWidth(48);
-    mazeGameButton_->setMinimumHeight(58);
-    flappyBirdButton_->setMinimumHeight(58);
-    reactionTestButton_->setMinimumHeight(58);
-    fullscreenButton_->setMinimumHeight(42);
-    fullscreenButton_->setMinimumWidth(128);
+    headerTitleLabel_ = new QLabel("Little Box 工具箱", headerCard);
+    headerTitleLabel_->setObjectName("headerTitle");
 
-    titleLayout->addWidget(titleLabel);
-    titleLayout->addWidget(subtitleLabel);
-    titleLayout->setSpacing(4);
+    headerSubtitleLabel_ = new QLabel(categoryDescription(ModuleCategory::Tools), headerCard);
+    headerSubtitleLabel_->setObjectName("headerSubtitle");
+    headerSubtitleLabel_->setWordWrap(true);
 
-    headerLayout->addWidget(logoBadge, 0, Qt::AlignTop);
-    headerLayout->addSpacing(16);
-    headerLayout->addLayout(titleLayout, 1);
-    headerLayout->addWidget(fullscreenButton_, 0, Qt::AlignTop);
+    titleBlock->addWidget(headerTitleLabel_);
+    titleBlock->addWidget(headerSubtitleLabel_);
+    titleBlock->setSpacing(4);
 
-    featureGrid->addWidget(shutdownButton_, 0, 0);
-    // Create a container widget that holds the website open button and a small switch button on the right
-    auto* websiteContainer = new QWidget(heroCard);
-    auto* websiteLayout = new QHBoxLayout(websiteContainer);
-    websiteLayout->setContentsMargins(0, 0, 0, 0);
-    websiteLayout->setSpacing(8);
-    websiteLayout->addWidget(weddingAdminButton_);
-    websiteLayout->addWidget(websiteSwitchButton_);
-    featureGrid->addWidget(websiteContainer, 0, 1);
-    featureGrid->addWidget(mazeGameButton_, 1, 0);
-    featureGrid->addWidget(flappyBirdButton_, 1, 1);
-    featureGrid->addWidget(reactionTestButton_, 2, 0, 1, 2);
-    featureGrid->setHorizontalSpacing(14);
-    featureGrid->setVerticalSpacing(14);
+    auto* fullscreenButton = new QPushButton("进入全屏", headerCard);
+    fullscreenButton->setObjectName("ghostButton");
+    fullscreenButton->setCursor(Qt::PointingHandCursor);
+    fullscreenButton->setMinimumHeight(38);
+    fullscreenButton->setMinimumWidth(100);
 
-    heroLayout->addLayout(headerLayout);
-    heroLayout->addSpacing(20);
-    heroLayout->addWidget(featureLabel);
-    heroLayout->addSpacing(12);
-    heroLayout->addWidget(highlightLabel);
-    heroLayout->addSpacing(22);
-    heroLayout->addLayout(featureGrid);
-    heroLayout->setContentsMargins(30, 30, 30, 30);
-    heroLayout->setSpacing(0);
+    topRow->addWidget(logoBadge, 0, Qt::AlignTop);
+    topRow->addSpacing(14);
+    topRow->addLayout(titleBlock, 1);
+    topRow->addWidget(fullscreenButton, 0, Qt::AlignTop);
 
-    rootLayout->addStretch();
-    rootLayout->addWidget(heroCard);
-    rootLayout->addStretch();
-    rootLayout->setContentsMargins(28, 28, 28, 18);
+    headerLayout->addLayout(topRow);
 
-    auto* shadowEffect = new QGraphicsDropShadowEffect(heroCard);
-    shadowEffect->setBlurRadius(42);
-    shadowEffect->setOffset(0, 18);
-    shadowEffect->setColor(QColor(55, 65, 81, 90));
-    heroCard->setGraphicsEffect(shadowEffect);
+    auto* headerShadow = new QGraphicsDropShadowEffect(headerCard);
+    headerShadow->setBlurRadius(40);
+    headerShadow->setOffset(0, 12);
+    headerShadow->setColor(QColor(251, 113, 133, 40));
+    headerCard->setGraphicsEffect(headerShadow);
 
-    centralWidget->setStyleSheet(
-        "QWidget#centralWidget { background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #eef2ff, stop:1 #f8fafc); }"
-        "QFrame#heroCard { background:white; border:1px solid #dbe4ff; border-radius:28px; }"
-        "QLabel#logoBadge { background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #6366f1, stop:1 #7c3aed); color:white; border-radius:39px; font-size:28px; font-weight:800; }"
-        "QLabel#titleLabel { color:#1e1b4b; font-size:30px; font-weight:800; }"
-        "QLabel#subtitleLabel { color:#6366f1; font-size:15px; font-weight:600; }"
-        "QLabel#featureLabel { color:#334155; font-size:15px; line-height:1.6; }"
-        "QLabel#highlightLabel { color:#475569; font-size:14px; padding:14px 16px; background:#f8faff; border:1px solid #e0e7ff; border-radius:16px; }"
-        "QPushButton { border-radius:16px; padding:12px 18px; font-size:14px; font-weight:700; }"
-        "QPushButton#primaryButton { background:#5b5cf0; color:white; border:none; }"
-        "QPushButton#primaryButton:hover { background:#4f46e5; }"
-        "QPushButton#primaryButton:pressed { background:#4338ca; }"
-        "QPushButton#secondaryButton { background:#eef2ff; color:#312e81; border:1px solid #c7d2fe; }"
-        "QPushButton#secondaryButton:hover { background:#e0e7ff; }"
-        "QPushButton#secondaryButton:pressed { background:#c7d2fe; }"
-        "QPushButton#featureButton { background:white; color:#1f2937; border:1px solid #dbe4ff; }"
-        "QPushButton#featureButton:hover { background:#f8faff; border-color:#c7d2fe; }"
-        "QPushButton#featureButton:pressed { background:#eef2ff; }"
-        "QPushButton#ghostButton { background:#ffffff; color:#4338ca; border:1px solid #c7d2fe; padding:10px 16px; }"
-        "QPushButton#ghostButton:hover { background:#eef2ff; }"
-        "QPushButton#ghostButton { font-weight:700; }"
-    );
+    // Module card grid
+    cardGrid_ = new ModuleCardGrid(contentArea_);
+
+    contentLayout->addWidget(headerCard);
+    contentLayout->addSpacing(20);
+    contentLayout->addWidget(cardGrid_, 1);
+
+    // ── Assemble ─────────────────────────────────────────────────────────
+
+    rootLayout->addWidget(sidebar_);
+    rootLayout->addWidget(contentArea_, 1);
 
     setCentralWidget(centralWidget);
 
-    // Load persisted website URL (if any)
-    QSettings settings;
-    const QString saved = settings.value("website/url").toString();
-    if (!saved.isEmpty()) {
-        weddingAdminButton_->setText(saved);
-    }
+    connect(fullscreenButton, &QPushButton::clicked, this, &MainWindow::toggleFullscreen);
 }
 
 void MainWindow::setupConnections() {
-    connect(shutdownButton_, &QPushButton::clicked, this, &MainWindow::openShutdownDialog);
-    connect(weddingAdminButton_, &QPushButton::clicked, this, &MainWindow::openWeddingAdminPage);
-    connect(websiteSwitchButton_, &QPushButton::clicked, this, &MainWindow::openWebsiteInputDialog);
-    connect(mazeGameButton_, &QPushButton::clicked, this, &MainWindow::openMazeGame);
-    connect(flappyBirdButton_, &QPushButton::clicked, this, &MainWindow::openFlappyBirdGame);
-    connect(reactionTestButton_, &QPushButton::clicked, this, &MainWindow::openReactionTest);
-    connect(fullscreenButton_, &QPushButton::clicked, this, &MainWindow::toggleFullscreen);
+    connect(sidebar_, &Sidebar::categoryChanged,   this, &MainWindow::onCategoryChanged);
+    connect(sidebar_, &Sidebar::settingsRequested, this, &MainWindow::onSettingsRequested);
+    connect(cardGrid_, &ModuleCardGrid::moduleClicked, this, &MainWindow::onModuleClicked);
+
+    connect(&ThemeManager::instance(), &ThemeManager::themeChanged,
+            this, &MainWindow::onThemeChanged);
 
     auto* fullscreenShortcut = new QShortcut(QKeySequence(Qt::Key_F11), this);
     connect(fullscreenShortcut, &QShortcut::activated, this, &MainWindow::toggleFullscreen);
@@ -215,115 +192,49 @@ void MainWindow::setupConnections() {
 
 void MainWindow::setupStatusBar() {
     auto* versionLabel = new QLabel(QString::fromUtf8(kVersionText), this);
-    versionLabel->setStyleSheet("color:#6366f1; font-weight:600; padding-right:8px;");
+    versionLabel->setObjectName("versionLabel");
+    versionLabel->setStyleSheet("color:#fb7185; font-weight:700; padding-right:8px;");
 
     statusBar()->addPermanentWidget(versionLabel);
-    statusBar()->setStyleSheet(
-        "QStatusBar { background:white; color:#475569; border-top:1px solid #e2e8f0; }"
-    );
 }
 
-void MainWindow::updateWindowModeUi() {
-    fullscreenButton_->setText(isFullScreen() ? "退出全屏" : "进入全屏");
-    statusBar()->showMessage(isFullScreen() ? "状态：全屏模式（按 F11 退出）" : "状态：窗口模式（支持自由缩放，按 F11 全屏）");
+// ── Theme ──────────────────────────────────────────────────────────────────────
+
+void MainWindow::applyThemeStylesheet() {
+    const bool dark = ThemeManager::instance().isDark();
+    contentArea_->setStyleSheet(dark ? kDarkContentStyleSheet : kLightContentStyleSheet);
+    statusBar()->setStyleSheet(dark ? kDarkStatusBarStyleSheet : kLightStatusBarStyleSheet);
 }
 
-void MainWindow::openShutdownDialog() {
-    ShutdownDialog shutdownDialog(this);
-    shutdownDialog.exec();
+void MainWindow::onThemeChanged(const bool dark) {
+    Q_UNUSED(dark);
+    applyThemeStylesheet();
+    // Rebuild cards so inline label colors update
+    refreshModuleGrid(currentCategory_);
 }
 
-void MainWindow::openWeddingAdminPage() {
-    // Read persisted URL from QSettings first, fall back to environment variable
-    QSettings settings;
-    QString website = settings.value("website/url").toString();
+// ── Slots ─────────────────────────────────────────────────────────────────────
 
-    if (website.isEmpty()) {
-        const QByteArray envUrl = qgetenv(kWebsiteEnvVar);
-        website = QString::fromUtf8(envUrl);
-    }
-
-    if (website.isEmpty()) {
-        // Prompt user to input the URL if none configured
-        QMessageBox::information(
-            this,
-            QStringLiteral("请输入网址"),
-            QStringLiteral("请先通过右侧按钮输入并保存要打开的网址。\n按钮上会显示“点击输入网址”。"),
-            QMessageBox::Ok
-        );
-        return;
-    }
-
-    const bool opened = QDesktopServices::openUrl(QUrl(website));
-
-    if (!opened) {
-        QMessageBox::warning(
-            this,
-            QStringLiteral("打开失败"),
-            QStringLiteral("无法使用默认浏览器打开网页。请检查系统浏览器配置。"),
-            QMessageBox::Ok
-        );
-    }
+void MainWindow::onSettingsRequested() {
+    SettingsDialog dialog(this);
+    dialog.exec();
+    // Rebuild grid in case website URL changed (button label may differ elsewhere)
 }
 
-void MainWindow::openWebsiteInputDialog() {
-    QSettings settings;
-    QString current = settings.value("website/url").toString();
-
-    bool ok = false;
-    const QString input = QInputDialog::getText(this, "设置网站地址", "请输入要打开的网站 URL（含 http:// 或 https://）：", QLineEdit::Normal, current, &ok);
-
-    if (!ok) {
-        return;
-    }
-
-    const QString trimmed = input.trimmed();
-    if (trimmed.isEmpty()) {
-        settings.remove("website/url");
-        weddingAdminButton_->setText("点击输入网址");
-        return;
-    }
-
-    // Basic validation
-    if (!(trimmed.startsWith("http://") || trimmed.startsWith("https://"))) {
-        QMessageBox::warning(
-            this,
-            QStringLiteral("无效网址"),
-            QStringLiteral("网址需要以 http:// 或 https:// 开头。"),
-            QMessageBox::Ok
-        );
-        return;
-    }
-
-    settings.setValue("website/url", trimmed);
-    weddingAdminButton_->setText(trimmed);
+void MainWindow::onCategoryChanged(const ModuleCategory category) {
+    refreshModuleGrid(category);
 }
 
-void MainWindow::openMazeGame() {
-    if (mazeWindow_.isNull()) {
-        mazeWindow_ = new MazeGameWindow(this);
-        mazeWindow_->setAttribute(Qt::WA_DeleteOnClose);
-    }
+void MainWindow::refreshModuleGrid(const ModuleCategory category) {
+    currentCategory_ = category;
+    headerSubtitleLabel_->setText(categoryDescription(category));
 
-    bringToFront(mazeWindow_.data());
+    const auto modules = ModuleRegistry::instance().modulesForCategory(category);
+    cardGrid_->setModules(modules);
 }
 
-void MainWindow::openFlappyBirdGame() {
-    if (flappyBirdWindow_.isNull()) {
-        flappyBirdWindow_ = new FlappyBirdWindow(this);
-        flappyBirdWindow_->setAttribute(Qt::WA_DeleteOnClose);
-    }
-
-    bringToFront(flappyBirdWindow_.data());
-}
-
-void MainWindow::openReactionTest() {
-    if (reactionTestWindow_.isNull()) {
-        reactionTestWindow_ = new ReactionTestWindow(this);
-        reactionTestWindow_->setAttribute(Qt::WA_DeleteOnClose);
-    }
-
-    bringToFront(reactionTestWindow_.data());
+void MainWindow::onModuleClicked(const QString& id) {
+    ModuleRegistry::instance().launch(id, this);
 }
 
 void MainWindow::toggleFullscreen() {
@@ -332,6 +243,18 @@ void MainWindow::toggleFullscreen() {
     } else {
         showFullScreen();
     }
-
     updateWindowModeUi();
+}
+
+void MainWindow::updateWindowModeUi() {
+    const auto buttons = findChildren<QPushButton*>("ghostButton");
+    for (auto* btn : buttons) {
+        btn->setText(isFullScreen() ? "退出全屏" : "进入全屏");
+    }
+
+    statusBar()->showMessage(
+        isFullScreen()
+            ? "状态：全屏模式（按 F11 退出）"
+            : "状态：窗口模式（支持自由缩放，按 F11 全屏）"
+    );
 }

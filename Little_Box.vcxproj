@@ -91,10 +91,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\core\ModuleRegistry.cpp" />
+    <ClCompile Include="src\core\ThemeManager.cpp" />
+    <ClCompile Include="src\ui\dialogs\SettingsDialog.cpp" />
     <ClCompile Include="src\ui\windows\FlappyBirdWindow.cpp" />
     <ClCompile Include="src\ui\windows\MazeGameWindow.cpp" />
+    <ClCompile Include="src\ui\windows\PomodoroWindow.cpp" />
     <ClCompile Include="src\ui\windows\ReactionTestWindow.cpp" />
     <ClCompile Include="src\ui\widgets\ReactionTestWidget.cpp" />
+    <ClCompile Include="src\ui\widgets\Sidebar.cpp" />
+    <ClCompile Include="src\ui\widgets\ModuleCardGrid.cpp" />
     <ClCompile Include="src\ui\dialogs\ShutdownDialog.cpp" />
     <QtMoc Include="src\ui\windows\MainWindow.h" />
     <ClCompile Include="src\ui\windows\MainWindow.cpp" />
@@ -102,9 +108,16 @@
     <ClCompile Include="src\services\SystemCommandService.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="src\core\ThemeManager.h" />
+    <QtMoc Include="src\ui\dialogs\SettingsDialog.h" />
     <QtMoc Include="src\ui\dialogs\ShutdownDialog.h" />
+    <QtMoc Include="src\ui\widgets\Sidebar.h" />
+    <QtMoc Include="src\ui\widgets\ModuleCardGrid.h" />
+    <QtMoc Include="src\ui\windows\PomodoroWindow.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\core\ModuleInfo.h" />
+    <ClInclude Include="src\core\ModuleRegistry.h" />
     <ClInclude Include="src\resources\AppIcon.h" />
     <ClInclude Include="src\ui\windows\FlappyBirdWindow.h" />
     <ClInclude Include="src\ui\windows\MazeGameWindow.h" />
