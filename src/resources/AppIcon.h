@@ -24,8 +24,8 @@ inline QIcon createAppIcon() {
 
         const QRectF rect(1.0, 1.0, size - 2.0, size - 2.0);
         QLinearGradient background(0.0, 0.0, size, size);
-        background.setColorAt(0.0, QColor("#6366F1"));
-        background.setColorAt(1.0, QColor("#7C3AED"));
+        background.setColorAt(0.0, QColor("#06b6d4"));
+        background.setColorAt(1.0, QColor("#0d9488"));
 
         painter.setPen(Qt::NoPen);
         painter.setBrush(background);

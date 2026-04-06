@@ -92,6 +92,21 @@
     <ClCompile Include="src\ui\windows\ReactionTestWindow.cpp">
       <Filter>Source Files\ui\windows</Filter>
     </ClCompile>
+    <ClCompile Include="src\ui\windows\Game2048Window.cpp">
+      <Filter>Source Files\ui\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\windows\TypingTestWindow.cpp">
+      <Filter>Source Files\ui\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\windows\SnakeGameWindow.cpp">
+      <Filter>Source Files\ui\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\windows\MinesweeperWindow.cpp">
+      <Filter>Source Files\ui\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ui\windows\MemoryMatchWindow.cpp">
+      <Filter>Source Files\ui\windows</Filter>
+    </ClCompile>
     <ClCompile Include="src\ui\widgets\Sidebar.cpp">
       <Filter>Source Files\ui\widgets</Filter>
     </ClCompile>
@@ -116,6 +131,21 @@
       <Filter>Header Files\ui\widgets</Filter>
     </QtMoc>
     <QtMoc Include="src\ui\windows\PomodoroWindow.h">
+      <Filter>Header Files\ui\windows</Filter>
+    </QtMoc>
+    <QtMoc Include="src\ui\windows\Game2048Window.h">
+      <Filter>Header Files\ui\windows</Filter>
+    </QtMoc>
+    <QtMoc Include="src\ui\windows\TypingTestWindow.h">
+      <Filter>Header Files\ui\windows</Filter>
+    </QtMoc>
+    <QtMoc Include="src\ui\windows\SnakeGameWindow.h">
+      <Filter>Header Files\ui\windows</Filter>
+    </QtMoc>
+    <QtMoc Include="src\ui\windows\MinesweeperWindow.h">
+      <Filter>Header Files\ui\windows</Filter>
+    </QtMoc>
+    <QtMoc Include="src\ui\windows\MemoryMatchWindow.h">
       <Filter>Header Files\ui\windows</Filter>
     </QtMoc>
   </ItemGroup>

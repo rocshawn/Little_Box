@@ -1,8 +1,13 @@
 #include "ModuleRegistry.h"
 
 #include "../ui/dialogs/ShutdownDialog.h"
-#include "../ui/windows/FlappyBirdWindow.h"
+#include "../ui/windows/Game2048Window.h"
+#include "../ui/windows/TypingTestWindow.h"
+#include "../ui/windows/SnakeGameWindow.h"
+#include "../ui/windows/MinesweeperWindow.h"
+#include "../ui/windows/MemoryMatchWindow.h"
 #include "../ui/windows/MazeGameWindow.h"
+#include "../ui/windows/FlappyBirdWindow.h"
 #include "../ui/windows/PomodoroWindow.h"
 #include "../ui/windows/ReactionTestWindow.h"
 
@@ -165,6 +170,66 @@ void ModuleRegistry::registerBuiltinModules() {
     // ── Games ──────────────────────────────────────────
 
     registerModule({
+        /* id          */ "2048",
+        /* name        */ "2048",
+        /* description */ "经典的数字合并滑块游戏，甜心马卡龙版",
+        /* emoji       */ "\xF0\x9F\x8E\xB2",  // 🎲
+        /* category    */ ModuleCategory::Games,
+        /* launchMode  */ LaunchMode::Window,
+        /* launcher    */ [this](QWidget* parent) {
+            auto* window = new Game2048Window(parent);
+            window->setAttribute(Qt::WA_DeleteOnClose);
+            openWindows_["2048"] = window;
+            bringToFront(window);
+        }
+    });
+
+    registerModule({
+        /* id          */ "snake",
+        /* name        */ "贪吃蛇",
+        /* description */ "果冻质感的英文经典贪吃蛇小游戏",
+        /* emoji       */ "\xF0\x9F\x90\x8D",  // 🐍
+        /* category    */ ModuleCategory::Games,
+        /* launchMode  */ LaunchMode::Window,
+        /* launcher    */ [this](QWidget* parent) {
+            auto* window = new SnakeGameWindow(parent);
+            window->setAttribute(Qt::WA_DeleteOnClose);
+            openWindows_["snake"] = window;
+            bringToFront(window);
+        }
+    });
+
+    registerModule({
+        /* id          */ "minesweeper",
+        /* name        */ "可爱扫雷",
+        /* description */ "粉色立体风格的地雷阵挑战",
+        /* emoji       */ "\xF0\x9F\x92\xA3",  // 💣
+        /* category    */ ModuleCategory::Games,
+        /* launchMode  */ LaunchMode::Window,
+        /* launcher    */ [this](QWidget* parent) {
+            auto* window = new MinesweeperWindow(parent);
+            window->setAttribute(Qt::WA_DeleteOnClose);
+            openWindows_["minesweeper"] = window;
+            bringToFront(window);
+        }
+    });
+
+    registerModule({
+        /* id          */ "memorymatch",
+        /* name        */ "记忆翻牌",
+        /* description */ "翻转卡片找到配对的可爱 Emoji",
+        /* emoji       */ "\xF0\x9F\xA7\xA9",  // 🧩
+        /* category    */ ModuleCategory::Games,
+        /* launchMode  */ LaunchMode::Window,
+        /* launcher    */ [this](QWidget* parent) {
+            auto* window = new MemoryMatchWindow(parent);
+            window->setAttribute(Qt::WA_DeleteOnClose);
+            openWindows_["memorymatch"] = window;
+            bringToFront(window);
+        }
+    });
+
+    registerModule({
         /* id          */ "maze",
         /* name        */ "迷宫闯关",
         /* description */ "方向键控制，穿越迷宫到达出口",
@@ -195,6 +260,21 @@ void ModuleRegistry::registerBuiltinModules() {
     });
 
     // ── Challenge ──────────────────────────────────────
+
+    registerModule({
+        /* id          */ "typingtest",
+        /* name        */ "打字速度测验",
+        /* description */ "名著节选英文打字训练，监测你的手速",
+        /* emoji       */ "\xE2\x8C\xA8\xEF\xB8\x8F",  // ⌨️
+        /* category    */ ModuleCategory::Challenge,
+        /* launchMode  */ LaunchMode::Window,
+        /* launcher    */ [this](QWidget* parent) {
+            auto* window = new TypingTestWindow(parent);
+            window->setAttribute(Qt::WA_DeleteOnClose);
+            openWindows_["typingtest"] = window;
+            bringToFront(window);
+        }
+    });
 
     registerModule({
         /* id          */ "reaction",

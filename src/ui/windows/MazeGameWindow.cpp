@@ -9,6 +9,7 @@
 #include <QPainter>
 #include <QPushButton>
 #include <QRandomGenerator>
+#include <QRectF>
 #include <QStatusBar>
 #include <QVBoxLayout>
 #include <QWidget>

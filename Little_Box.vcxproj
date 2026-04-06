@@ -98,6 +98,11 @@
     <ClCompile Include="src\ui\windows\MazeGameWindow.cpp" />
     <ClCompile Include="src\ui\windows\PomodoroWindow.cpp" />
     <ClCompile Include="src\ui\windows\ReactionTestWindow.cpp" />
+    <ClCompile Include="src\ui\windows\Game2048Window.cpp" />
+    <ClCompile Include="src\ui\windows\TypingTestWindow.cpp" />
+    <ClCompile Include="src\ui\windows\SnakeGameWindow.cpp" />
+    <ClCompile Include="src\ui\windows\MinesweeperWindow.cpp" />
+    <ClCompile Include="src\ui\windows\MemoryMatchWindow.cpp" />
     <ClCompile Include="src\ui\widgets\ReactionTestWidget.cpp" />
     <ClCompile Include="src\ui\widgets\Sidebar.cpp" />
     <ClCompile Include="src\ui\widgets\ModuleCardGrid.cpp" />
@@ -114,15 +119,20 @@
     <QtMoc Include="src\ui\widgets\Sidebar.h" />
     <QtMoc Include="src\ui\widgets\ModuleCardGrid.h" />
     <QtMoc Include="src\ui\windows\PomodoroWindow.h" />
+    <QtMoc Include="src\ui\windows\Game2048Window.h" />
+    <QtMoc Include="src\ui\windows\TypingTestWindow.h" />
+    <QtMoc Include="src\ui\windows\SnakeGameWindow.h" />
+    <QtMoc Include="src\ui\windows\MinesweeperWindow.h" />
+    <QtMoc Include="src\ui\windows\MemoryMatchWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\ModuleInfo.h" />
     <ClInclude Include="src\core\ModuleRegistry.h" />
     <ClInclude Include="src\resources\AppIcon.h" />
-    <ClInclude Include="src\ui\windows\FlappyBirdWindow.h" />
-    <ClInclude Include="src\ui\windows\MazeGameWindow.h" />
-    <ClInclude Include="src\ui\windows\ReactionTestWindow.h" />
-    <ClInclude Include="src\ui\widgets\ReactionTestWidget.h" />
+    <QtMoc Include="src\ui\windows\FlappyBirdWindow.h" />
+    <QtMoc Include="src\ui\windows\MazeGameWindow.h" />
+    <QtMoc Include="src\ui\windows\ReactionTestWindow.h" />
+    <QtMoc Include="src\ui\widgets\ReactionTestWidget.h" />
     <ClInclude Include="src\services\SystemCommandService.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

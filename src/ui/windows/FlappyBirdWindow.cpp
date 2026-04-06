@@ -8,6 +8,7 @@
 #include <QLinearGradient>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPointF>
 #include <QPolygonF>
 #include <QPushButton>
 #include <QRandomGenerator>
@@ -143,7 +144,7 @@ void FlappyBirdWidget::paintEvent(QPaintEvent* event) {
     painter.drawEllipse(QRectF(bird.left() + 18, bird.top() + 8, 8, 8));
     painter.setBrush(QColor("#111827"));
     painter.drawEllipse(QRectF(bird.left() + 21, bird.top() + 11, 3, 3));
-    painter.setBrush(QColor("#fb7185"));
+    painter.setBrush(QColor("#0d9488"));
     painter.drawPolygon(QPolygonF{ QPointF(bird.right() - 2, bird.center().y()), QPointF(bird.right() + 12, bird.center().y() - 5), QPointF(bird.right() + 12, bird.center().y() + 5) });
 
     painter.setBrush(QColor("#65a30d"));

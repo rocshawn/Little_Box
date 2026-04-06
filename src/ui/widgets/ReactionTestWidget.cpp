@@ -1,9 +1,13 @@
 #include "ReactionTestWidget.h"
 
+#include <QColor>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPaintEvent>
 #include <QPen>
+#include <QPoint>
 #include <QRandomGenerator>
+#include <QRect>
 #include <QSettings>
 #include <QStringList>
 #include <QTimer>
@@ -20,7 +24,14 @@ constexpr int kChartTopFloorMs = 300;
 
 ReactionTestWidget::ReactionTestWidget(QWidget* parent)
     : QWidget(parent),
-      waitTimer_(new QTimer(this)) {
+      waitTimer_(new QTimer(this)),
+      reactionTimer_(),
+      roundTimesMs_(),
+      state_(State::ReadyToStart),
+      clickedTooEarly_(false),
+      averageMs_(-1),
+      bestAverageMs_(-1),
+      isNewRecord_(false) {
     setMinimumHeight(320);
     setCursor(Qt::PointingHandCursor);
 

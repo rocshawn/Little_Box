@@ -42,17 +42,17 @@ protected:
     }
 
     void enterEvent(QEnterEvent* event) override {
-        const QString hoverBg  = dark_ ? "#4c0519" : "#fff1f2";
-        const QString hoverBdr = dark_ ? "#f43f5e" : "#fda4af";
-        setStyleSheet(QString("QFrame { background:%1; border:2px solid %2; border-radius:28px; }")
+        const QString hoverBg  = dark_ ? "#0f766e" : "#f0fdfa";
+        const QString hoverBdr = dark_ ? "#2dd4bf" : "#99f6e4";
+        setStyleSheet(QString("QFrame { background:%1; border:2px solid %2; border-radius:32px; }")
                       .arg(hoverBg, hoverBdr));
         QFrame::enterEvent(event);
     }
 
     void leaveEvent(QEvent* event) override {
-        const QString bg  = dark_ ? "#3a1c36" : "white";
-        const QString bdr = dark_ ? "#5e2c56" : "#ffe4e6";
-        setStyleSheet(QString("QFrame { background:%1; border:2px solid %2; border-radius:28px; }")
+        const QString bg  = dark_ ? "#134e4a" : "white";
+        const QString bdr = dark_ ? "transparent" : "transparent"; // borderless by default
+        setStyleSheet(QString("QFrame { background:%1; border:2px solid %2; border-radius:32px; }")
                       .arg(bg, bdr));
         QFrame::leaveEvent(event);
     }
@@ -108,11 +108,11 @@ void ModuleCardGrid::setModules(const QList<ModuleInfo>& modules) {
         const auto& mod = modules[i];
         const bool dark = ThemeManager::instance().isDark();
 
-        const QString cardBg  = dark ? "#3a1c36" : "white";
-        const QString cardBdr = dark ? "#5e2c56" : "#ffe4e6";
+        const QString cardBg  = dark ? "#134e4a" : "white";
+        const QString cardBdr = "transparent"; // modern borderless look
 
         auto* card = new ClickableCard(mod.id, this, dark, gridContainer_);
-        card->setStyleSheet(QString("QFrame { background:%1; border:2px solid %2; border-radius:28px; }")
+        card->setStyleSheet(QString("QFrame { background:%1; border:2px solid %2; border-radius:32px; }")
                             .arg(cardBg, cardBdr));
 
         auto* cardLayout = new QVBoxLayout(card);
@@ -120,10 +120,10 @@ void ModuleCardGrid::setModules(const QList<ModuleInfo>& modules) {
         cardLayout->setSpacing(8);
 
         // Emoji badge (colorful candy theme based on index modulo)
-        const QStringList lightCandyBgs = { "#ffe4e6", "#fef08a", "#d9f99d", "#bfdbfe", "#e9d5ff" };
-        const QStringList lightCandyTxs = { "#e11d48", "#854d0e", "#3f6212", "#1e3a8a", "#581c87" };
-        const QStringList darkCandyBgs  = { "#4c0519", "#422006", "#14532d", "#172554", "#3b0764" };
-        const QStringList darkCandyTxs  = { "#fda4af", "#fde047", "#86efac", "#93c5fd", "#d8b4fe" };
+        const QStringList lightCandyBgs = { "#ccfbf1", "#ecfeff", "#f0fdfa", "#e0f2fe", "#f1f5f9" };
+        const QStringList lightCandyTxs = { "#0d9488", "#0891b2", "#0f766e", "#0369a1", "#475569" };
+        const QStringList darkCandyBgs  = { "#115e59", "#155e75", "#064e3b", "#0c4a6e", "#1e293b" };
+        const QStringList darkCandyTxs  = { "#5eead4", "#67e8f9", "#6ee7b7", "#7dd3fc", "#94a3b8" };
         int colorIdx = i % 5;
 
         auto* emojiLabel = new QLabel(mod.emoji, card);
@@ -135,16 +135,18 @@ void ModuleCardGrid::setModules(const QList<ModuleInfo>& modules) {
 
         // Name
         auto* nameLabel = new QLabel(mod.name, card);
-        nameLabel->setStyleSheet(dark
-            ? "color:#fff0f2; font-size:16px; font-weight:800;"
-            : "color:#4c0519; font-size:16px; font-weight:800;");
-
+        nameLabel->setObjectName("moduleName");
+        
         // Description
         auto* descLabel = new QLabel(mod.description, card);
-        descLabel->setStyleSheet(dark
-            ? "color:#fbcfe8; font-size:13px;"
-            : "color:#fb7185; font-size:13px;");
+        descLabel->setObjectName("moduleDesc");
         descLabel->setWordWrap(true);
+
+        card->setStyleSheet(card->styleSheet() + (dark 
+            ? "QLabel#moduleName { color:#2dd4bf; font-size:18px; font-weight:800; }"
+              "QLabel#moduleDesc { color:#94a3b8; font-size:13px; }"
+            : "QLabel#moduleName { color:#115e59; font-size:18px; font-weight:800; }"
+              "QLabel#moduleDesc { color:#475569; font-size:13px; }"));
 
         cardLayout->addWidget(emojiLabel);
         cardLayout->addWidget(nameLabel);
@@ -153,11 +155,11 @@ void ModuleCardGrid::setModules(const QList<ModuleInfo>& modules) {
 
         card->setMinimumHeight(kCardMinHeight);
 
-        // Subtle shadow
+        // Elegant soft shadow
         auto* shadow = new QGraphicsDropShadowEffect(card);
-        shadow->setBlurRadius(24);
-        shadow->setOffset(0, 6);
-        shadow->setColor(QColor(99, 102, 241, 28));
+        shadow->setBlurRadius(42);
+        shadow->setOffset(0, 10);
+        shadow->setColor(dark ? QColor(0, 0, 0, 100) : QColor(13, 148, 136, 32)); // Teal shadow
         card->setGraphicsEffect(shadow);
 
         grid->addWidget(card, i / kGridColumns, i % kGridColumns);

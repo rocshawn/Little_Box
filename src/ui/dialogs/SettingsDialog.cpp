@@ -9,14 +9,14 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
-#include <QRadioButton>
+#include <QButtonGroup>
 #include <QSettings>
 #include <QVBoxLayout>
 
 namespace {
 constexpr int kDialogWidth  = 500;
 constexpr int kDialogHeight = 580;
-constexpr auto kAppVersion  = "1.2.0";
+constexpr auto kAppVersion  = "1.3.0";
 constexpr auto kAppName     = "Little Box 工具箱";
 } // namespace
 
@@ -81,15 +81,23 @@ void SettingsDialog::setupUi() {
     websiteEdit_ = new QLineEdit(card);
     websiteEdit_->setObjectName("websiteEdit");
     websiteEdit_->setPlaceholderText("https://example.com");
-    websiteEdit_->setMinimumHeight(38);
+    websiteEdit_->setEchoMode(QLineEdit::Password);
+    websiteEdit_->setMinimumHeight(44);
+
+    toggleShowBtn_ = new QPushButton("\xF0\x9F\x91\x81", card); // 👁
+    toggleShowBtn_->setObjectName("secondaryButton");
+    toggleShowBtn_->setFixedSize(44, 44);
+    toggleShowBtn_->setCursor(Qt::PointingHandCursor);
+    toggleShowBtn_->setToolTip("显示/隐藏网址");
 
     auto* clearBtn = new QPushButton("清除", card);
     clearBtn->setObjectName("secondaryButton");
+    clearBtn->setFixedHeight(44);
     clearBtn->setCursor(Qt::PointingHandCursor);
-    clearBtn->setFixedHeight(38);
-    clearBtn->setFixedWidth(60);
 
     websiteRow->addWidget(websiteEdit_);
+    websiteRow->addSpacing(8);
+    websiteRow->addWidget(toggleShowBtn_);
     websiteRow->addSpacing(8);
     websiteRow->addWidget(clearBtn);
 
@@ -108,18 +116,23 @@ void SettingsDialog::setupUi() {
     cardLayout->addWidget(makeSectionTitle("\xF0\x9F\x8E\xA8", "界面主题", card));  // 🎨
     cardLayout->addSpacing(10);
 
-    lightRadio_  = new QRadioButton("日间模式", card);
-    darkRadio_   = new QRadioButton("夜间模式", card);
-    systemRadio_ = new QRadioButton("跟随系统", card);
+    auto* themeBox = new QHBoxLayout();
+    themeBox->setSpacing(12);
 
-    for (auto* radio : { lightRadio_, darkRadio_, systemRadio_ }) {
-        radio->setObjectName("themeRadio");
-        radio->setCursor(Qt::PointingHandCursor);
-        cardLayout->addWidget(radio);
-        cardLayout->addSpacing(4);
+    lightBtn_  = new QPushButton("日间模式", card);
+    darkBtn_   = new QPushButton("夜间模式", card);
+    systemBtn_ = new QPushButton("跟随系统", card);
+
+    for (auto* btn : { lightBtn_, darkBtn_, systemBtn_ }) {
+        btn->setObjectName("themeBtn");
+        btn->setCheckable(true);
+        btn->setCursor(Qt::PointingHandCursor);
+        btn->setFixedHeight(48);
+        themeBox->addWidget(btn);
     }
-
-    cardLayout->addSpacing(14);
+    
+    cardLayout->addLayout(themeBox);
+    cardLayout->addSpacing(18);
     cardLayout->addWidget(makeSeparator(card));
     cardLayout->addSpacing(18);
 
@@ -160,7 +173,7 @@ void SettingsDialog::setupUi() {
     auto* shadow = new QGraphicsDropShadowEffect(card);
     shadow->setBlurRadius(40);
     shadow->setOffset(0, 12);
-    shadow->setColor(dark ? QColor(0, 0, 0, 80) : QColor(251, 113, 133, 40));
+    shadow->setColor(dark ? QColor(0, 0, 0, 80) : QColor(13, 148, 136, 40)); // Teal shadow
     card->setGraphicsEffect(shadow);
 
     rootLayout->addWidget(card);
@@ -171,9 +184,11 @@ void SettingsDialog::setupUi() {
 }
 
 void SettingsDialog::setupConnections() {
-    connect(lightRadio_,  &QRadioButton::clicked, this, &SettingsDialog::onLightModeSelected);
-    connect(darkRadio_,   &QRadioButton::clicked, this, &SettingsDialog::onDarkModeSelected);
-    connect(systemRadio_, &QRadioButton::clicked, this, &SettingsDialog::onSystemModeSelected);
+    connect(lightBtn_,  &QPushButton::clicked, this, [this]{ onThemeModeSelected(ThemeMode::Light); });
+    connect(darkBtn_,   &QPushButton::clicked, this, [this]{ onThemeModeSelected(ThemeMode::Dark); });
+    connect(systemBtn_, &QPushButton::clicked, this, [this]{ onThemeModeSelected(ThemeMode::System); });
+
+    connect(toggleShowBtn_, &QPushButton::clicked, this, &SettingsDialog::onToggleWebsiteVisibility);
 
     // Save URL whenever it changes
     connect(websiteEdit_, &QLineEdit::textEdited, this, [this](const QString& text) {
@@ -187,11 +202,10 @@ void SettingsDialog::loadSettings() {
     websiteEdit_->setText(settings.value("website/url").toString());
 
     // Theme mode
-    switch (ThemeManager::instance().mode()) {
-    case ThemeMode::Light:  lightRadio_->setChecked(true);  break;
-    case ThemeMode::Dark:   darkRadio_->setChecked(true);   break;
-    case ThemeMode::System: systemRadio_->setChecked(true); break;
-    }
+    const auto mode = ThemeManager::instance().mode();
+    lightBtn_->setChecked(mode == ThemeMode::Light);
+    darkBtn_->setChecked(mode == ThemeMode::Dark);
+    systemBtn_->setChecked(mode == ThemeMode::System);
 }
 
 void SettingsDialog::saveWebsite(const QString& url) {
@@ -203,16 +217,21 @@ void SettingsDialog::saveWebsite(const QString& url) {
     }
 }
 
-void SettingsDialog::onLightModeSelected() {
-    ThemeManager::instance().setMode(ThemeMode::Light);
+void SettingsDialog::onThemeModeSelected(ThemeMode mode) {
+    ThemeManager::instance().setMode(mode);
+    loadSettings(); // update checked states
+    // Instant refresh for this dialog!
+    setStyleSheet(buildStyleSheet(ThemeManager::instance().isDark()));
 }
 
-void SettingsDialog::onDarkModeSelected() {
-    ThemeManager::instance().setMode(ThemeMode::Dark);
-}
-
-void SettingsDialog::onSystemModeSelected() {
-    ThemeManager::instance().setMode(ThemeMode::System);
+void SettingsDialog::onToggleWebsiteVisibility() {
+    if (websiteEdit_->echoMode() == QLineEdit::Password) {
+        websiteEdit_->setEchoMode(QLineEdit::Normal);
+        toggleShowBtn_->setText("\xF0\x9F\x99\x88"); // 🙈
+    } else {
+        websiteEdit_->setEchoMode(QLineEdit::Password);
+        toggleShowBtn_->setText("\xF0\x9F\x91\x81"); // 👁
+    }
 }
 
 void SettingsDialog::onClearWebsite() {
@@ -223,47 +242,49 @@ void SettingsDialog::onClearWebsite() {
 QString SettingsDialog::buildStyleSheet(const bool dark) const {
     if (dark) {
         return
-            "QDialog { background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #1a0b1c, stop:1 #2d142c); }"
-            "QFrame#settingsCard { background:#3a1c36; border:2px solid #5e2c56; border-radius:28px; }"
-            "QLabel#dialogTitle { color:#fff0f2; font-size:22px; font-weight:800; }"
-            "QLabel#sectionTitle { color:#fbcfe8; font-size:13px; font-weight:700; }"
-            "QLabel#hintLabel { color:#f472b6; font-size:12px; }"
-            "QLabel#versionAppName { color:#fbcfe8; font-size:14px; font-weight:600; }"
-            "QLabel#versionBadge { color:#fda4af; background:#4c0519; border:1px solid #f43f5e;"
+            "QDialog { background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #020617, stop:1 #0f172a); }"
+            "QFrame#settingsCard { background:#0f172a; border:2px solid #1e293b; border-radius:28px; }"
+            "QLabel#dialogTitle { color:#f1f5f9; font-size:22px; font-weight:800; }"
+            "QLabel#sectionTitle { color:#2dd4bf; font-size:13px; font-weight:700; }"
+            "QLabel#hintLabel { color:#94a3b8; font-size:12px; }"
+            "QLabel#versionAppName { color:#f1f5f9; font-size:14px; font-weight:600; }"
+            "QLabel#versionBadge { color:#2dd4bf; background:#020617; border:1px solid #1e293b;"
             "  border-radius:12px; padding:3px 10px; font-size:12px; font-weight:700; }"
-            "QLineEdit#websiteEdit { background:#1a0b1c; border:1px solid #5e2c56; border-radius:14px;"
-            "  padding:8px 12px; color:#fff0f2; font-size:13px; }"
-            "QLineEdit#websiteEdit:focus { border-color:#f43f5e; }"
-            "QRadioButton#themeRadio { color:#fbcfe8; font-size:14px; }"
-            "QRadioButton#themeRadio::indicator { width:18px; height:18px; }"
-            "QFrame { color:#5e2c56; }"  // separators
-            "QPushButton#primaryButton { background:#f43f5e; color:white; border:none;"
+            "QLineEdit#websiteEdit { background:#020617; border:1px solid #1e293b; border-radius:14px;"
+            "  padding:8px 12px; color:#f1f5f9; font-size:13px; }"
+            "QLineEdit#websiteEdit:focus { border-color:#0d9488; }"
+            "QPushButton#themeBtn { background:#020617; color:#94a3b8; border:2px solid #1e293b;"
+            "  border-radius:14px; font-size:13px; font-weight:700; }"
+            "QPushButton#themeBtn:checked { background:#0d9488; color:white; border-color:#2dd4bf; }"
+            "QFrame { color:#1e293b; }"  // separators
+            "QPushButton#primaryButton { background:#0d9488; color:white; border:none;"
             "  border-radius:20px; padding:10px 16px; font-size:13px; font-weight:700; }"
-            "QPushButton#primaryButton:hover { background:#e11d48; }"
-            "QPushButton#secondaryButton { background:#3a1c36; color:#fbcfe8; border:2px solid #5e2c56;"
+            "QPushButton#primaryButton:hover { background:#0f766e; }"
+            "QPushButton#secondaryButton { background:#0f172a; color:#2dd4bf; border:2px solid #1e293b;"
             "  border-radius:14px; padding:6px 10px; font-size:13px; font-weight:700; }"
-            "QPushButton#secondaryButton:hover { background:#4c0519; border-color:#83386d; }";
+            "QPushButton#secondaryButton:hover { background:#1e293b; border-color:#2dd4bf; }";
     }
 
     return
-        "QDialog { background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #fffaff, stop:1 #fff1f2); }"
-        "QFrame#settingsCard { background:white; border:2px solid #ffe4e6; border-radius:28px; }"
-        "QLabel#dialogTitle { color:#4c0519; font-size:22px; font-weight:800; }"
-        "QLabel#sectionTitle { color:#fb7185; font-size:13px; font-weight:700; }"
-        "QLabel#hintLabel { color:#fda4af; font-size:12px; }"
-        "QLabel#versionAppName { color:#4c0519; font-size:14px; font-weight:600; }"
-        "QLabel#versionBadge { color:#f43f5e; background:#fff1f2; border:1px solid #fda4af;"
+        "QDialog { background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #f0fdfa, stop:1 #ecfdf5); }"
+        "QFrame#settingsCard { background:white; border:2px solid #ccfbf1; border-radius:28px; }"
+        "QLabel#dialogTitle { color:#115e59; font-size:22px; font-weight:800; }"
+        "QLabel#sectionTitle { color:#0d9488; font-size:13px; font-weight:700; }"
+        "QLabel#hintLabel { color:#5eead4; font-size:12px; }"
+        "QLabel#versionAppName { color:#134e4a; font-size:14px; font-weight:600; }"
+        "QLabel#versionBadge { color:#0d9488; background:#ccfbf1; border:1px solid #5eead4;"
         "  border-radius:12px; padding:3px 10px; font-size:12px; font-weight:700; }"
-        "QLineEdit#websiteEdit { background:#fffaff; border:2px solid #ffe4e6; border-radius:14px;"
-        "  padding:8px 12px; color:#4c0519; font-size:13px; }"
-        "QLineEdit#websiteEdit:focus { border-color:#fb7185; background:white; }"
-        "QRadioButton#themeRadio { color:#4c0519; font-size:14px; }"
-        "QRadioButton#themeRadio::indicator { width:18px; height:18px; }"
-        "QFrame { color:#ffe4e6; }"  // separators
-        "QPushButton#primaryButton { background:#fb7185; color:white; border:none;"
+        "QLineEdit#websiteEdit { background:#f0fdfa; border:2px solid #ccfbf1; border-radius:14px;"
+        "  padding:8px 12px; color:#115e59; font-size:13px; }"
+        "QLineEdit#websiteEdit:focus { border-color:#0d9488; background:white; }"
+        "QPushButton#themeBtn { background:white; color:#134e4a; border:2px solid #ccfbf1;"
+        "  border-radius:14px; font-size:13px; font-weight:700; }"
+        "QPushButton#themeBtn:checked { background:#0d9488; color:white; border-color:#0f766e; }"
+        "QFrame { color:#ccfbf1; }"  // separators
+        "QPushButton#primaryButton { background:#0d9488; color:white; border:none;"
         "  border-radius:20px; padding:10px 16px; font-size:13px; font-weight:700; }"
-        "QPushButton#primaryButton:hover { background:#f43f5e; }"
-        "QPushButton#secondaryButton { background:#fff1f2; color:#f43f5e; border:2px solid #fda4af;"
+        "QPushButton#primaryButton:hover { background:#0f766e; }"
+        "QPushButton#secondaryButton { background:#f0fdfa; color:#0d9488; border:2px solid #ccfbf1;"
         "  border-radius:14px; padding:6px 10px; font-size:13px; font-weight:700; }"
-        "QPushButton#secondaryButton:hover { background:#ffe4e6; }";
+        "QPushButton#secondaryButton:hover { background:#ccfbf1; }";
 }

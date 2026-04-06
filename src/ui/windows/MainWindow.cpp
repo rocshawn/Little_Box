@@ -23,7 +23,7 @@ constexpr int kMinimumWindowWidth  = 820;
 constexpr int kMinimumWindowHeight = 560;
 constexpr int kInitialWindowWidth  = 1020;
 constexpr int kInitialWindowHeight = 700;
-constexpr auto kVersionText = "版本 1.2.0";
+constexpr auto kVersionText = "版本 1.3.0";
 
 QString categoryDescription(const ModuleCategory category) {
     switch (category) {
@@ -36,37 +36,37 @@ QString categoryDescription(const ModuleCategory category) {
 
 const char* const kLightContentStyleSheet =
     "QWidget#contentArea {"
-    "  background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #fffaff, stop:1 #fff1f2);"
+    "  background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #f0fdfa, stop:1 #ecfdf5);"
     "}"
-    "QFrame#headerCard { background:white; border:2px solid #ffe4e6; border-radius:28px; }"
+    "QFrame#headerCard { background:white; border:2px solid #ccfbf1; border-radius:28px; }"
     "QLabel#headerLogoBadge {"
-    "  background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #fb7185, stop:1 #f43f5e);"
+    "  background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #06b6d4, stop:1 #0d9488);"
     "  color:white; border-radius:26px; font-size:20px; font-weight:800;"
     "}"
-    "QLabel#headerTitle  { color:#4c0519; font-size:26px; font-weight:800; }"
-    "QLabel#headerSubtitle { color:#fb7185; font-size:14px; font-weight:600; }"
+    "QLabel#headerTitle  { color:#115e59; font-size:26px; font-weight:800; }"
+    "QLabel#headerSubtitle { color:#0d9488; font-size:14px; font-weight:600; }"
     "QPushButton#ghostButton {"
-    "  background:#ffffff; color:#fb7185; border:2px solid #ffe4e6;"
+    "  background:#ffffff; color:#0d9488; border:2px solid #ccfbf1;"
     "  border-radius:18px; padding:8px 16px; font-size:13px; font-weight:700;"
     "}"
-    "QPushButton#ghostButton:hover { background:#fff1f2; border-color:#fda4af; }";
+    "QPushButton#ghostButton:hover { background:#f0fdfa; border-color:#5eead4; }";
 
 const char* const kDarkContentStyleSheet =
     "QWidget#contentArea {"
-    "  background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #1a0b1c, stop:1 #2d142c);"
+    "  background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #020617, stop:1 #0f172a);"
     "}"
-    "QFrame#headerCard { background:#3a1c36; border:2px solid #5e2c56; border-radius:28px; }"
+    "QFrame#headerCard { background:#0f172a; border:2px solid #1e293b; border-radius:28px; }"
     "QLabel#headerLogoBadge {"
-    "  background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #e11d48, stop:1 #9f1239);"
+    "  background:qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #06b6d4, stop:1 #0d9488);"
     "  color:white; border-radius:26px; font-size:20px; font-weight:800;"
     "}"
-    "QLabel#headerTitle  { color:#fff0f2; font-size:26px; font-weight:800; }"
-    "QLabel#headerSubtitle { color:#fbcfe8; font-size:14px; font-weight:600; }"
+    "QLabel#headerTitle  { color:#f1f5f9; font-size:26px; font-weight:800; }"
+    "QLabel#headerSubtitle { color:#94a3b8; font-size:14px; font-weight:600; }"
     "QPushButton#ghostButton {"
-    "  background:#3a1c36; color:#fbcfe8; border:2px solid #5e2c56;"
+    "  background:#0f172a; color:#2dd4bf; border:2px solid #1e293b;"
     "  border-radius:18px; padding:8px 16px; font-size:13px; font-weight:700;"
     "}"
-    "QPushButton#ghostButton:hover { background:#5e2c56; border-color:#83386d; }";
+    "QPushButton#ghostButton:hover { background:#1e293b; border-color:#2dd4bf; }";
 
 const char* const kLightStatusBarStyleSheet =
     "QStatusBar { background:white; color:#475569; border-top:1px solid #e2e8f0; }";

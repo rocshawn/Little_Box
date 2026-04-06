@@ -21,23 +21,23 @@ const QList<CategoryDef> kCategories{
 };
 
 const char* const kSidebarStyleSheet =
-    "QWidget#sidebar { background:qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #fb7185, stop:1 #f43f5e); }"
+    "QWidget#sidebar { background:qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #06b6d4, stop:1 #0d9488); }"
 
     "QPushButton#categoryButton {"
-    "  background:transparent; color:rgba(255, 255, 255, 0.85); border:none;"
+    "  background:transparent; color:#134e4a; border:none;"
     "  font-size:14px; font-weight:800;"
     "  padding:14px 4px; border-radius:18px;"
     "}"
     "QPushButton#categoryButton:hover {"
-    "  background:rgba(255, 255, 255, 0.15); color:#ffffff;"
+    "  background:rgba(255, 255, 255, 0.15); color:#134e4a;"
     "}"
     "QPushButton#categoryButton[active=\"true\"] {"
-    "  background:rgba(255, 255, 255, 0.35); color:#ffffff;"
+    "  background:rgba(255, 255, 255, 0.35); color:#000000;"
     "}"
 
     "QLabel#logoBadge {"
     "  background:#ffffff;"
-    "  color:#f43f5e; border-radius:18px; font-size:18px; font-weight:900;"
+    "  color:#0d9488; border-radius:18px; font-size:18px; font-weight:900;"
     "}"
 
     "QPushButton#settingsButton {"

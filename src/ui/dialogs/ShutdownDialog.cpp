@@ -101,26 +101,26 @@ void ShutdownDialog::setupUi() {
     auto* shadowEffect = new QGraphicsDropShadowEffect(contentCard);
     shadowEffect->setBlurRadius(30);
     shadowEffect->setOffset(0, 14);
-    shadowEffect->setColor(QColor(79, 70, 229, 45));
+    shadowEffect->setColor(QColor(13, 148, 136, 45)); // Teal shadow
     contentCard->setGraphicsEffect(shadowEffect);
 
     setStyleSheet(
-        "QDialog { background:#eef2ff; }"
-        "QFrame#contentCard { background:white; border:1px solid #dbe4ff; border-radius:24px; }"
-        "QLabel#titleLabel { color:#1e1b4b; font-size:24px; font-weight:800; }"
+        "QDialog { background:#f0fdfa; }"
+        "QFrame#contentCard { background:white; border:1px solid #ccfbf1; border-radius:32px; }"
+        "QLabel#titleLabel { color:#134e4a; font-size:24px; font-weight:800; }"
         "QLabel#descriptionLabel { color:#475569; font-size:14px; margin-top:8px; }"
-        "QLabel#inputLabel { color:#312e81; font-size:13px; font-weight:700; margin-top:6px; }"
+        "QLabel#inputLabel { color:#0f766e; font-size:13px; font-weight:700; margin-top:6px; }"
         "QLabel#helperLabel { color:#64748b; font-size:12px; margin-top:8px; }"
-        "QLineEdit { border:1px solid #c7d2fe; border-radius:14px; padding:12px 14px; background:#f8faff; color:#0f172a; }"
-        "QLineEdit:focus { border:1px solid #5b5cf0; background:white; }"
+        "QLineEdit { border:1px solid #ccfbf1; border-radius:14px; padding:12px 14px; background:#f8faff; color:#0f172a; }"
+        "QLineEdit:focus { border:1px solid #0d9488; background:white; }"
         "QPushButton { border-radius:14px; padding:10px 16px; font-size:13px; font-weight:700; }"
-        "QPushButton#primaryButton { background:#5b5cf0; color:white; border:none; }"
-        "QPushButton#primaryButton:hover { background:#4f46e5; }"
-        "QPushButton#primaryButton:pressed { background:#4338ca; }"
-        "QPushButton#secondaryButton { background:#eef2ff; color:#312e81; border:1px solid #c7d2fe; }"
-        "QPushButton#secondaryButton:hover { background:#e0e7ff; }"
-        "QPushButton#ghostButton { background:white; color:#475569; border:1px solid #dbe4ff; }"
-        "QPushButton#ghostButton:hover { background:#f8fafc; }"
+        "QPushButton#primaryButton { background:#0d9488; color:white; border:none; }"
+        "QPushButton#primaryButton:hover { background:#0f766e; }"
+        "QPushButton#primaryButton:pressed { background:#115e59; }"
+        "QPushButton#secondaryButton { background:#f0fdfa; color:#134e4a; border:1px solid #ccfbf1; }"
+        "QPushButton#secondaryButton:hover { background:#ccfbf1; }"
+        "QPushButton#ghostButton { background:white; color:#475569; border:1px solid #ccfbf1; }"
+        "QPushButton#ghostButton:hover { background:#f0fdfa; }"
     );
 }
 

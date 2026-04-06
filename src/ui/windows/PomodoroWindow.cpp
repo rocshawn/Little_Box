@@ -27,12 +27,15 @@ QString formatTime(int seconds) {
 } // namespace
 
 PomodoroWindow::PomodoroWindow(QWidget* parent)
-    : QMainWindow(parent) {
+    : QMainWindow(parent),
+      timer_(new QTimer(this)),
+      remainingSeconds_(kWorkSeconds),
+      isWorkMode_(true),
+      isMiniMode_(false) {
     
     // As a top-level system tool window
     setWindowFlags(Qt::Window);
 
-    timer_ = new QTimer(this);
     timer_->setInterval(1000);
     connect(timer_, &QTimer::timeout, this, &PomodoroWindow::onTick);
 
@@ -59,8 +62,8 @@ void PomodoroWindow::setupUi() {
     // ── Theme
     const bool dark = ThemeManager::instance().isDark();
     setStyleSheet(dark 
-        ? "QMainWindow { background:qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #2d142c, stop:1 #1a0b1c); }"
-        : "QMainWindow { background:qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #fff1f2, stop:1 #fffaff); }");
+        ? "QMainWindow { background:qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #064e3b, stop:1 #065f46); }"
+        : "QMainWindow { background:qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #f0fdfa, stop:1 #ccfbf1); }");
 }
 
 void PomodoroWindow::setupNormalUi() {
@@ -74,9 +77,9 @@ void PomodoroWindow::setupNormalUi() {
     workModeBtn_ = new QPushButton("专注模式");
     breakModeBtn_ = new QPushButton("休息模式");
 
-    const QString btnStyle = "QPushButton { padding: 8px 16px; border-radius: 16px; font-weight: bold; font-size: 14px; background: #ffe4e6; color: #fb7185; border: none; }"
-                             "QPushButton:hover { background: #fda4af; color: white; }"
-                             "QPushButton[active=\"true\"] { background: #f43f5e; color: white; }";
+    const QString btnStyle = "QPushButton { padding: 8px 16px; border-radius: 16px; font-weight: bold; font-size: 14px; background: #ccfbf1; color: #0d9488; border: none; }"
+                             "QPushButton:hover { background: #99f6e4; color: white; }"
+                             "QPushButton[active=\"true\"] { background: #0d9488; color: white; }";
     
     workModeBtn_->setStyleSheet(btnStyle);
     breakModeBtn_->setStyleSheet(btnStyle);
@@ -100,19 +103,19 @@ void PomodoroWindow::setupNormalUi() {
     auto* timeFrame = new QFrame();
     timeFrame->setFixedSize(260, 260);
     timeFrame->setStyleSheet(dark 
-        ? "QFrame { background: #4c0519; border-radius: 130px; border: 8px solid #881337; }"
-        : "QFrame { background: white; border-radius: 130px; border: 8px solid #ffe4e6; }");
+        ? "QFrame { background: #064e3b; border-radius: 130px; border: 8px solid #065f46; }"
+        : "QFrame { background: white; border-radius: 130px; border: 8px solid #ccfbf1; }");
     
     auto* timeLayout = new QVBoxLayout(timeFrame);
     timeLayout->setAlignment(Qt::AlignCenter);
 
     normalStatusLabel_ = new QLabel("专注中...");
     normalStatusLabel_->setAlignment(Qt::AlignCenter);
-    normalStatusLabel_->setStyleSheet(dark ? "color:#fda4af; font-size:16px; font-weight: bold;" : "color:#fb7185; font-size:16px; font-weight: bold;");
+    normalStatusLabel_->setStyleSheet(dark ? "color:#5eead4; font-size:16px; font-weight: bold;" : "color:#0d9488; font-size:16px; font-weight: bold;");
 
     normalTimeLabel_ = new QLabel(formatTime(remainingSeconds_));
     normalTimeLabel_->setAlignment(Qt::AlignCenter);
-    normalTimeLabel_->setStyleSheet(dark ? "color:#fff0f2; font-size:64px; font-weight: 900;" : "color:#e11d48; font-size:64px; font-weight: 900;");
+    normalTimeLabel_->setStyleSheet(dark ? "color:#fff0f2; font-size:64px; font-weight: 900;" : "color:#0d9488; font-size:64px; font-weight: 900;");
     
     timeLayout->addWidget(normalStatusLabel_);
     timeLayout->addWidget(normalTimeLabel_);
@@ -126,16 +129,16 @@ void PomodoroWindow::setupNormalUi() {
     normalPlayPauseBtn_->setFixedSize(60, 60);
     normalPlayPauseBtn_->setCursor(Qt::PointingHandCursor);
     normalPlayPauseBtn_->setStyleSheet(
-        "QPushButton { background: #fb7185; color: white; font-size: 24px; border-radius: 30px; border: none; }"
-        "QPushButton:hover { background: #f43f5e; }"
+        "QPushButton { background: #0d9488; color: white; font-size: 24px; border-radius: 30px; border: none; }"
+        "QPushButton:hover { background: #0f766e; }"
     );
 
     auto* resetBtn = new QPushButton("\xE2\x86\xBB"); // Reset ↻
     resetBtn->setFixedSize(60, 60);
     resetBtn->setCursor(Qt::PointingHandCursor);
     resetBtn->setStyleSheet(
-        "QPushButton { background: #ffe4e6; color: #fb7185; font-size: 26px; border-radius: 30px; border: none; }"
-        "QPushButton:hover { background: #fda4af; color: white; }"
+        "QPushButton { background: #ccfbf1; color: #0d9488; font-size: 26px; border-radius: 30px; border: none; }"
+        "QPushButton:hover { background: #99f6e4; color: white; }"
     );
 
     mainControlsRow->addStretch();
@@ -152,10 +155,10 @@ void PomodoroWindow::setupNormalUi() {
     auto* miniBtn = new QPushButton("\xE2\x86\x99 小窗模式"); // ↙ Small window mode
     miniBtn->setCursor(Qt::PointingHandCursor);
     miniBtn->setStyleSheet(dark 
-        ? "QPushButton { background: transparent; color: #fda4af; font-weight: bold; font-size: 13px; border: none; }"
-          "QPushButton:hover { color: #fecdd3; }"
-        : "QPushButton { background: transparent; color: #f43f5e; font-weight: bold; font-size: 13px; border: none; }"
-          "QPushButton:hover { color: #e11d48; }");
+        ? "QPushButton { background: transparent; color: #99f6e4; font-weight: bold; font-size: 13px; border: none; }"
+          "QPushButton:hover { color: #ccfbf1; }"
+        : "QPushButton { background: transparent; color: #0d9488; font-weight: bold; font-size: 13px; border: none; }"
+          "QPushButton:hover { color: #0f766e; }");
     bottomRow->addStretch();
     bottomRow->addWidget(miniBtn);
     layout->addLayout(bottomRow);
@@ -174,8 +177,8 @@ void PomodoroWindow::setupMiniUi() {
     // Give mini background
     const bool dark = ThemeManager::instance().isDark();
     miniWidget_->setStyleSheet(dark 
-        ? "QWidget { background: #4c0519; border: 2px solid #881337; border-radius: 20px; }"
-        : "QWidget { background: white; border: 2px solid #ffe4e6; border-radius: 20px; }");
+        ? "QWidget { background: #064e3b; border: 2px solid #065f46; border-radius: 20px; }"
+        : "QWidget { background: white; border: 2px solid #ccfbf1; border-radius: 20px; }");
 
     auto* layout = new QHBoxLayout(miniWidget_);
     layout->setContentsMargins(14, 8, 14, 8);
@@ -184,14 +187,14 @@ void PomodoroWindow::setupMiniUi() {
     miniTimeLabel_ = new QLabel(formatTime(remainingSeconds_), miniWidget_);
     miniTimeLabel_->setStyleSheet(dark 
         ? "color:#fff0f2; font-size:24px; font-weight: 900; background: transparent; border: none;" 
-        : "color:#e11d48; font-size:24px; font-weight: 900; background: transparent; border: none;");
+        : "color:#0d9488; font-size:24px; font-weight: 900; background: transparent; border: none;");
     
     miniPlayPauseBtn_ = new QPushButton("\xE2\x96\xB6", miniWidget_);
     miniPlayPauseBtn_->setFixedSize(32, 32);
     miniPlayPauseBtn_->setCursor(Qt::PointingHandCursor);
     miniPlayPauseBtn_->setStyleSheet(
-        "QPushButton { background: #fb7185; color: white; font-size: 14px; border-radius: 16px; border: none; }"
-        "QPushButton:hover { background: #f43f5e; }"
+        "QPushButton { background: #0d9488; color: white; font-size: 14px; border-radius: 16px; border: none; }"
+        "QPushButton:hover { background: #0f766e; }"
     );
 
     auto* exitMiniBtn = new QPushButton("\xE2\x86\x97", miniWidget_); // ↗ Expand
@@ -341,7 +344,7 @@ void PomodoroWindow::mousePressEvent(QMouseEvent* event) {
 }
 
 void PomodoroWindow::mouseMoveEvent(QMouseEvent* event) {
-    if (isMiniMode_ && event->buttons() & Qt::LeftButton) {
+    if (isMiniMode_ && event->buttons().testFlag(Qt::LeftButton)) {
         move(event->globalPosition().toPoint() - dragPosition_);
         event->accept();
     } else {
