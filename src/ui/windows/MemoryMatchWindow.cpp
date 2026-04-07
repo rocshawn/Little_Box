@@ -1,30 +1,32 @@
 #include "MemoryMatchWindow.h"
 
 #include "../../core/ThemeManager.h"
+#include "../../logic/MemoryMatchModel.h"
 
-#include <QPainter>
 #include <QMouseEvent>
-#include <QRandomGenerator>
+#include <QPainter>
 #include <QTimer>
-#include <algorithm>
-#include <random>
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QPushButton>
 
 MemoryMatchWindow::MemoryMatchWindow(QWidget* parent)
     : QMainWindow(parent),
-      cards_(),
+      model_(new MemoryMatchModel(this)),
       firstFlippedIdx_(-1),
       secondFlippedIdx_(-1),
-      isProcessing_(false),
-      matchesFound_(0) {
+      isProcessing_(false) {
     setupUi();
-    resetGame();
+    
+    connect(model_, &MemoryMatchModel::updated, this, &MemoryMatchWindow::updateUi);
+    connect(model_, &MemoryMatchModel::matchResult, this, &MemoryMatchWindow::onMatchResult);
+    connect(model_, &MemoryMatchModel::gameOver, this, &MemoryMatchWindow::onGameOver);
+
+    updateUi();
 }
 
 void MemoryMatchWindow::setupUi() {
-    setWindowTitle("记忆翻牌 - 甜心挑战");
+    setWindowTitle("记忆翻牌 - 甜心挑战 (MVC)");
     setFixedSize(kCols * (kCellSize + 10) + 100, kRows * (kCellSize + 10) + 180);
 
     const bool dark = ThemeManager::instance().isDark();
@@ -60,54 +62,37 @@ void MemoryMatchWindow::setupUi() {
 }
 
 void MemoryMatchWindow::resetGame() {
-    const QStringList emojiPool = {
-        "🍓", "🍑", "🍋", "🍒", "🥝", "🍩", "🧁", "🍭",
-        "🧸", "🎈", "🎨", "🧩", "🦄", "🌈", "🦋", "🌸"
-    };
-
-    int numPairs = (kRows * kCols) / 2;
-    QStringList gameEmojis;
-    for (int i = 0; i < numPairs; ++i) {
-        gameEmojis.append(emojiPool[i % emojiPool.size()]);
-        gameEmojis.append(emojiPool[i % emojiPool.size()]);
-    }
-
-    // Shuffle manually
-    std::random_device rd;
-    std::mt19937 g(rd());
-    std::shuffle(gameEmojis.begin(), gameEmojis.end(), g);
-
-    cards_.clear();
-    for (const auto& emoji : gameEmojis) {
-        cards_.append({ emoji, false, false });
-    }
-
-    matchesFound_ = 0;
+    model_->reset();
     firstFlippedIdx_ = -1;
     secondFlippedIdx_ = -1;
     isProcessing_ = false;
-
-    update();
+    if (auto status = centralWidget()->findChild<QLabel*>("statusLabel")) {
+        status->setText("找到所有的配对！");
+    }
 }
 
-void MemoryMatchWindow::checkMatch() {
-    if (cards_[firstFlippedIdx_].emoji == cards_[secondFlippedIdx_].emoji) {
-        cards_[firstFlippedIdx_].isMatched = true;
-        cards_[secondFlippedIdx_].isMatched = true;
-        matchesFound_++;
-        if (matchesFound_ == (kRows * kCols) / 2) {
-            if (auto status = centralWidget()->findChild<QLabel*>("statusLabel")) {
-                status->setText("全部匹配！真厉害 🎉");
-            }
-        }
+void MemoryMatchWindow::onMatchResult(bool success, int idx1, int idx2) {
+    if (success) {
+        firstFlippedIdx_ = -1;
+        secondFlippedIdx_ = -1;
+        isProcessing_ = false;
     } else {
-        cards_[firstFlippedIdx_].isFlipped = false;
-        cards_[secondFlippedIdx_].isFlipped = false;
+        QTimer::singleShot(800, this, [this, idx1, idx2]() {
+            model_->resetFlippedCards(idx1, idx2);
+            firstFlippedIdx_ = -1;
+            secondFlippedIdx_ = -1;
+            isProcessing_ = false;
+        });
     }
+}
 
-    firstFlippedIdx_ = -1;
-    secondFlippedIdx_ = -1;
-    isProcessing_ = false;
+void MemoryMatchWindow::onGameOver() {
+    if (auto status = centralWidget()->findChild<QLabel*>("statusLabel")) {
+        status->setText("全部匹配！真厉害 🎉");
+    }
+}
+
+void MemoryMatchWindow::updateUi() {
     update();
 }
 
@@ -121,29 +106,24 @@ void MemoryMatchWindow::paintEvent(QPaintEvent* event) {
     const QColor cardFrontBg = dark ? QColor(58, 28, 54) : QColor(255, 250, 255);
     const QColor borderCol   = dark ? QColor(94, 44, 86) : QColor(254, 205, 211);
 
-    const int offsetX = 50;
-    const int offsetY = 140;
+    const int offsetX = 50, offsetY = 140;
+    const auto& cards = model_->cards();
 
-    for (int i = 0; i < cards_.size(); ++i) {
-        int r = i / kCols;
-        int c = i % kCols;
+    for (int i = 0; i < cards.size(); ++i) {
+        int r = i / kCols, c = i % kCols;
         QRect rect(offsetX + c * (kCellSize + 10), offsetY + r * (kCellSize + 10), kCellSize, kCellSize);
-        const auto& card = cards_[i];
+        const auto& card = cards[i];
 
         if (card.isMatched || card.isFlipped) {
             painter.setBrush(cardFrontBg);
             painter.setPen(QPen(borderCol, 2));
             painter.drawRoundedRect(rect, 14, 14);
-            
-            QFont f = painter.font(); f.setPointSize(36); painter.setFont(f);
             painter.drawText(rect, Qt::AlignCenter, card.emoji);
         } else {
             painter.setBrush(cardBackBg);
             painter.setPen(Qt::NoPen);
             painter.drawRoundedRect(rect, 14, 14);
-            
             painter.setPen(dark ? QColor(251, 113, 133, 100) : QColor(244, 63, 94, 100));
-            QFont f = painter.font(); f.setPointSize(28); f.setBold(true); painter.setFont(f);
             painter.drawText(rect, Qt::AlignCenter, "?");
         }
     }
@@ -157,19 +137,15 @@ void MemoryMatchWindow::mousePressEvent(QMouseEvent* event) {
     int r = (event->pos().y() - offsetY) / (kCellSize + 10);
     int idx = r * kCols + c;
 
-    if (idx >= 0 && idx < cards_.size()) {
-        auto& card = cards_[idx];
-        
-        if (card.isMatched || card.isFlipped) return;
-
-        card.isFlipped = true;
-        if (firstFlippedIdx_ == -1) {
-            firstFlippedIdx_ = idx;
-        } else {
-            secondFlippedIdx_ = idx;
-            isProcessing_ = true;
-            QTimer::singleShot(800, this, &MemoryMatchWindow::checkMatch);
+    if (idx >= 0 && idx < model_->cards().size()) {
+        if (model_->attemptFlip(idx)) {
+            if (firstFlippedIdx_ == -1) {
+                firstFlippedIdx_ = idx;
+            } else {
+                secondFlippedIdx_ = idx;
+                isProcessing_ = true;
+                model_->checkMatch(firstFlippedIdx_, secondFlippedIdx_);
+            }
         }
-        update();
     }
 }

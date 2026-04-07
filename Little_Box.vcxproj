@@ -111,6 +111,15 @@
     <ClCompile Include="src\ui\windows\MainWindow.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\services\SystemCommandService.cpp" />
+    <ClCompile Include="src\logic\SnakeGameModel.cpp" />
+    <ClCompile Include="src\logic\FlappyBirdModel.cpp" />
+    <ClCompile Include="src\logic\Game2048Model.cpp" />
+    <ClCompile Include="src\logic\MazeGameModel.cpp" />
+    <ClCompile Include="src\logic\MemoryMatchModel.cpp" />
+    <ClCompile Include="src\logic\MinesweeperModel.cpp" />
+    <ClCompile Include="src\logic\PomodoroModel.cpp" />
+    <ClCompile Include="src\logic\ReactionTestModel.cpp" />
+    <ClCompile Include="src\logic\TypingTestModel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="src\core\ThemeManager.h" />
@@ -124,6 +133,15 @@
     <QtMoc Include="src\ui\windows\SnakeGameWindow.h" />
     <QtMoc Include="src\ui\windows\MinesweeperWindow.h" />
     <QtMoc Include="src\ui\windows\MemoryMatchWindow.h" />
+    <QtMoc Include="src\logic\SnakeGameModel.h" />
+    <QtMoc Include="src\logic\FlappyBirdModel.h" />
+    <QtMoc Include="src\logic\Game2048Model.h" />
+    <QtMoc Include="src\logic\MazeGameModel.h" />
+    <QtMoc Include="src\logic\MemoryMatchModel.h" />
+    <QtMoc Include="src\logic\MinesweeperModel.h" />
+    <QtMoc Include="src\logic\PomodoroModel.h" />
+    <QtMoc Include="src\logic\ReactionTestModel.h" />
+    <QtMoc Include="src\logic\TypingTestModel.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\ModuleInfo.h" />

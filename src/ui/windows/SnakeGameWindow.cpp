@@ -1,36 +1,33 @@
 #include "SnakeGameWindow.h"
 
 #include "../../core/ThemeManager.h"
+#include "../../logic/SnakeGameModel.h"
 
 #include <QKeyEvent>
 #include <QPainter>
-#include <QRandomGenerator>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QLabel>
-#include <QPushButton>
 
 SnakeGameWindow::SnakeGameWindow(QWidget* parent)
     : QMainWindow(parent),
-      currentDir_(Direction::Right),
-      nextDir_(Direction::Right),
-      snake_(),
-      food_(),
-      score_(0),
-      isGameOver_(false),
-      canUpdateDir_(true),
-      timer_{ nullptr } {
+      model_(new SnakeGameModel(kGridSize, this)),
+      timer_(new QTimer(this)) {
+      
     setupUi();
-    resetGame();
 
-    timer_ = new QTimer(this);
-    timer_->setInterval(150); // Standard speed
-    connect(timer_, &QTimer::timeout, this, &SnakeGameWindow::updateGame);
-    timer_->start();
+    connect(model_, &SnakeGameModel::updated, this, &SnakeGameWindow::onModelUpdated);
+    connect(model_, &SnakeGameModel::scoreChanged, this, &SnakeGameWindow::onScoreChanged);
+    connect(model_, &SnakeGameModel::gameOver, this, &SnakeGameWindow::onGameOver);
+
+    timer_->setInterval(150);
+    connect(timer_, &QTimer::timeout, model_, &SnakeGameModel::update);
+    
+    startNewGame();
 }
 
 void SnakeGameWindow::setupUi() {
-    setWindowTitle("贪吃蛇 - 果冻版");
+    setWindowTitle("贪吃蛇 - 果冻版 (MVC)");
     setFixedSize(kGridSize * kCellSize + 60, kGridSize * kCellSize + 120);
 
     const bool dark = ThemeManager::instance().isDark();
@@ -45,108 +42,40 @@ void SnakeGameWindow::setupUi() {
     layout->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
 
     // Score Label
-    auto* scoreLabel = new QLabel(this);
-    scoreLabel->setObjectName("scoreLabel");
-    scoreLabel->setAlignment(Qt::AlignCenter);
-    scoreLabel->setStyleSheet(dark 
+    scoreLabel_ = new QLabel(this);
+    scoreLabel_->setObjectName("scoreLabel");
+    scoreLabel_->setAlignment(Qt::AlignCenter);
+    scoreLabel_->setStyleSheet(dark 
         ? "color:#fff0f2; font-size:20px; font-weight:800;" 
         : "color:#4c0519; font-size:20px; font-weight:800;");
-    layout->addWidget(scoreLabel);
+    layout->addWidget(scoreLabel_);
     
     layout->addStretch();
 }
 
-void SnakeGameWindow::resetGame() {
-    snake_.clear();
-    snake_.append({ kGridSize / 2, kGridSize / 2 });
-    snake_.append({ kGridSize / 2 - 1, kGridSize / 2 });
-    snake_.append({ kGridSize / 2 - 2, kGridSize / 2 });
-
-    currentDir_ = Direction::Right;
-    nextDir_ = Direction::Right;
-    score_ = 0;
-    isGameOver_ = false;
-
-    spawnFood();
-}
-
-void SnakeGameWindow::spawnFood() {
-    while (true) {
-        int x = QRandomGenerator::global()->bounded(kGridSize);
-        int y = QRandomGenerator::global()->bounded(kGridSize);
-        bool collision = false;
-        for (const auto& part : snake_) {
-            if (part.x() == x && part.y() == y) {
-                collision = true;
-                break;
-            }
-        }
-        if (!collision) {
-            food_ = { x, y };
-            break;
-        }
-    }
-}
-
-void SnakeGameWindow::updateGame() {
-    if (isGameOver_) {
-        timer_->stop();
-        return;
-    }
-
-    canUpdateDir_ = true; // Reset lock every frame
-    moveSnake();
-    checkCollision();
-    
-    // Update score label
-    if (auto* lbl = centralWidget()->findChild<QLabel*>("scoreLabel")) {
-        lbl->setText(QString("SCORE: %1").arg(score_));
-    }
-    
+void SnakeGameWindow::startNewGame() {
+    model_->reset();
+    timer_->start();
     update();
 }
 
-void SnakeGameWindow::moveSnake() {
-    currentDir_ = nextDir_;
-    QPoint head = snake_.front();
+void SnakeGameWindow::onModelUpdated() {
+    update();
+}
+
+void SnakeGameWindow::onScoreChanged(int score) {
+    if (scoreLabel_) {
+        scoreLabel_->setText(QString("SCORE: %1").arg(score));
+    }
     
-    switch (currentDir_) {
-        case Direction::Up:    head.rx()--; break;
-        case Direction::Down:  head.rx()++; break;
-        case Direction::Left:  head.ry()--; break;
-        case Direction::Right: head.ry()++; break;
-    }
-
-    // Wrap around logic or wall collision? Let's go with wall collision for a challenge.
-    if (head.x() < 0 || head.x() >= kGridSize || head.y() < 0 || head.y() >= kGridSize) {
-        isGameOver_ = true;
-        return;
-    }
-
-    // Self-collision
-    for (const auto& part : snake_) {
-        if (part == head) {
-            isGameOver_ = true;
-            return;
-        }
-    }
-
-    snake_.push_front(head);
-
-    if (head == food_) {
-        score_ += 10;
-        spawnFood();
-        // Speed up a bit?
-        if (timer_->interval() > 70) {
-            timer_->setInterval(timer_->interval() - 2);
-        }
-    } else {
-        snake_.pop_back();
+    // Speed up logic (now handled in UI because it affects the Timer interval)
+    if (timer_ && timer_->interval() > 70) {
+        timer_->setInterval(150 - (score / 10) * 2);
     }
 }
 
-void SnakeGameWindow::checkCollision() {
-    // Already checked in moveSnake
+void SnakeGameWindow::onGameOver() {
+    timer_->stop();
 }
 
 void SnakeGameWindow::paintEvent(QPaintEvent* event) {
@@ -158,7 +87,7 @@ void SnakeGameWindow::paintEvent(QPaintEvent* event) {
     const QColor gridBg  = dark ? QColor(58, 28, 54) : QColor(255, 241, 242);
     const QColor snakeHead = dark ? QColor(251, 113, 133) : QColor(244, 63, 94);
     const QColor snakeBody = dark ? QColor(225, 29, 72, 180) : QColor(251, 113, 133, 180);
-    const QColor foodColor = QColor(255, 204, 0); // Apple goldish
+    const QColor foodColor = QColor(255, 204, 0);
 
     const int offsetX = 30;
     const int offsetY = 80;
@@ -168,9 +97,10 @@ void SnakeGameWindow::paintEvent(QPaintEvent* event) {
     painter.setBrush(gridBg);
     painter.drawRoundedRect(offsetX - 5, offsetY - 5, kGridSize * kCellSize + 10, kGridSize * kCellSize + 10, 16, 16);
 
-    // Draw Snake
-    for (int i = 0; i < snake_.size(); ++i) {
-        const auto& part = snake_[i];
+    // Draw Snake (from model)
+    const auto& snake = model_->snake();
+    for (int i = 0; i < snake.size(); ++i) {
+        const auto& part = snake[i];
         if (i == 0) painter.setBrush(snakeHead);
         else painter.setBrush(snakeBody);
         
@@ -179,14 +109,15 @@ void SnakeGameWindow::paintEvent(QPaintEvent* event) {
                                 kCellSize - 2, kCellSize - 2, 8, 8);
     }
 
-    // Draw Food
+    // Draw Food (from model)
+    const auto& food = model_->food();
     painter.setBrush(foodColor);
-    painter.drawRoundedRect(offsetX + food_.y() * kCellSize, 
-                            offsetY + food_.x() * kCellSize, 
+    painter.drawRoundedRect(offsetX + food.y() * kCellSize, 
+                            offsetY + food.x() * kCellSize, 
                             kCellSize - 2, kCellSize - 2, 10, 10);
     
     // Game Over Overlay
-    if (isGameOver_) {
+    if (model_->isGameOver()) {
         painter.setBrush(QColor(0, 0, 0, 120));
         painter.drawRect(rect());
         painter.setPen(Qt::white);
@@ -199,24 +130,20 @@ void SnakeGameWindow::paintEvent(QPaintEvent* event) {
 }
 
 void SnakeGameWindow::keyPressEvent(QKeyEvent* event) {
-    if (!canUpdateDir_) return;
-
-    Direction potentialDir = currentDir_;
     switch (event->key()) {
         case Qt::Key_Up:
-        case Qt::Key_W: if (currentDir_ != Direction::Down) potentialDir = Direction::Up; break;
+        case Qt::Key_W: model_->setDirection(SnakeGameModel::Direction::Up); break;
         case Qt::Key_Down:
-        case Qt::Key_S: if (currentDir_ != Direction::Up) potentialDir = Direction::Down; break;
+        case Qt::Key_S: model_->setDirection(SnakeGameModel::Direction::Down); break;
         case Qt::Key_Left:
-        case Qt::Key_A: if (currentDir_ != Direction::Right) potentialDir = Direction::Left; break;
+        case Qt::Key_A: model_->setDirection(SnakeGameModel::Direction::Left); break;
         case Qt::Key_Right:
-        case Qt::Key_D: if (currentDir_ != Direction::Left) potentialDir = Direction::Right; break;
-        case Qt::Key_R: if (isGameOver_) { resetGame(); timer_->start(); update(); } return;
-        default: QMainWindow::keyPressEvent(event); return;
-    }
-
-    if (potentialDir != currentDir_) {
-        nextDir_ = potentialDir;
-        canUpdateDir_ = false; // Lock until next frame
+        case Qt::Key_D: model_->setDirection(SnakeGameModel::Direction::Right); break;
+        case Qt::Key_R: 
+            if (model_->isGameOver()) { 
+                startNewGame(); 
+            } 
+            break;
+        default: QMainWindow::keyPressEvent(event); break;
     }
 }

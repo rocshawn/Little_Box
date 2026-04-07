@@ -1,50 +1,33 @@
 #include "TypingTestWindow.h"
 
 #include "../../core/ThemeManager.h"
+#include "../../logic/TypingTestModel.h"
 
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
-#include <QRandomGenerator>
 #include <QComboBox>
 #include <QScrollBar>
-#include <QSettings>
 #include <QTextBrowser>
 #include <QTextCursor>
 #include <QTextEdit>
-#include <QTimer>
 #include <QVBoxLayout>
 
 TypingTestWindow::TypingTestWindow(QWidget* parent)
     : QMainWindow(parent),
-      textDisplay_(nullptr),
-      inputEdit_(nullptr),
-      wpmLabel_(nullptr),
-      accuracyLabel_(nullptr),
-      bestWpmLabel_(nullptr),
-      timeLabel_(nullptr),
-      difficultyCombo_(nullptr),
-      timer_(nullptr),
-      targetText_(""),
-      elapsedSeconds_(0),
-      isRunning_(false),
-      bestWpm_(0.0),
-      currentDifficulty_(Difficulty::Medium) {
+      model_(new TypingTestModel(this)) {
     
-    timer_ = new QTimer(this);
-    QSettings settings;
-    bestWpm_ = settings.value("typing_test/best_wpm", 0.0).toDouble();
-
-    timer_->setInterval(1000);
-    connect(timer_, &QTimer::timeout, this, &TypingTestWindow::onTick);
-
     setupUi();
-    resetTest();
+
+    connect(model_, &TypingTestModel::updated, this, &TypingTestWindow::updateUi);
+    connect(model_, &TypingTestModel::finished, this, &TypingTestWindow::onFinished);
+    
+    updateUi();
 }
 
 void TypingTestWindow::setupUi() {
-    setWindowTitle("英文打字速度挑战");
+    setWindowTitle("英文打字速度挑战 (MVC)");
     setMinimumSize(700, 500);
 
     const bool dark = ThemeManager::instance().isDark();
@@ -58,7 +41,6 @@ void TypingTestWindow::setupUi() {
     mainLayout->setContentsMargins(40, 40, 40, 40);
     mainLayout->setSpacing(20);
 
-    // ── Header (Stats)
     auto* statsLayout = new QHBoxLayout();
     
     auto createStatCard = [dark](const QString& title, QLabel*& valueLabel) {
@@ -84,24 +66,21 @@ void TypingTestWindow::setupUi() {
     statsLayout->addWidget(createStatCard("WPM (词/分)", wpmLabel_));
     statsLayout->addWidget(createStatCard("准确率", accuracyLabel_));
     statsLayout->addWidget(createStatCard("时间 (秒)", timeLabel_));
-
-    // Best Record Card
     statsLayout->addWidget(createStatCard("历史最高 WPM", bestWpmLabel_));
-    bestWpmLabel_->setText(QString::number(bestWpm_, 'f', 1));
     
     auto* optionsLayout = new QVBoxLayout();
     auto* diffLabel = new QLabel("难度选择:");
-        diffLabel->setStyleSheet(dark ? "color:#fda4af; font-weight:800;" : "color:#f43f5e; font-weight:800;");
+    diffLabel->setStyleSheet(dark ? "color:#fda4af; font-weight:800;" : "color:#f43f5e; font-weight:800;");
     
     difficultyCombo_ = new QComboBox();
     difficultyCombo_->addItems({"简单 (短)", "中等 (适中)", "困难 (长)"});
-    difficultyCombo_->setCurrentIndex(1); // Default to Medium
+    difficultyCombo_->setCurrentIndex(static_cast<int>(model_->difficulty()));
     difficultyCombo_->setStyleSheet(dark
         ? "QComboBox { background:#3a1c36; color:#fbcfe8; border:2px solid #5e2c56; border-radius:10px; padding:5px; }"
         : "QComboBox { background:white; color:#4c0519; border:2px solid #ffe4e6; border-radius:10px; padding:5px; }");
     
     connect(difficultyCombo_, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index) {
-        currentDifficulty_ = static_cast<Difficulty>(index);
+        model_->setDifficulty(static_cast<TypingTestModel::Difficulty>(index));
         resetTest();
     });
 
@@ -122,7 +101,6 @@ void TypingTestWindow::setupUi() {
 
     mainLayout->addLayout(statsLayout);
 
-    // ── Text Display Area 
     textDisplay_ = new QTextBrowser(this);
     textDisplay_->setMinimumHeight(120);
     textDisplay_->setStyleSheet(dark 
@@ -131,7 +109,6 @@ void TypingTestWindow::setupUi() {
     
     mainLayout->addWidget(textDisplay_);
 
-    // ── Input Area
     inputEdit_ = new QTextEdit(this);
     inputEdit_->setPlaceholderText("在这里开始敲击键盘...");
     inputEdit_->setStyleSheet(dark 
@@ -145,134 +122,64 @@ void TypingTestWindow::setupUi() {
     connect(inputEdit_, &QTextEdit::textChanged, this, &TypingTestWindow::checkTyping);
 }
 
-QString TypingTestWindow::generateQuote() {
-    QStringList filtered;
-    for (const auto& quote : kQuotes_) {
-        const int len = quote.length();
-        if (currentDifficulty_ == Difficulty::Short && len < 60) filtered.append(quote);
-        else if (currentDifficulty_ == Difficulty::Medium && len >= 60 && len < 150) filtered.append(quote);
-        else if (currentDifficulty_ == Difficulty::Long && len >= 150) filtered.append(quote);
-    }
-    
-    // Fallback if no quote matches current filter
-    if (filtered.isEmpty()) filtered = kQuotes_;
+void TypingTestWindow::updateUi() {
+    wpmLabel_->setText(QString::number(model_->wpm(), 'f', 1));
+    accuracyLabel_->setText(QString("%1%").arg(model_->accuracy()));
+    timeLabel_->setText(QString::number(model_->elapsedSeconds()));
+    bestWpmLabel_->setText(QString::number(model_->bestWpm(), 'f', 1));
 
-    int idx = QRandomGenerator::global()->bounded(filtered.size());
-    return filtered[idx];
+    if (inputEdit_->toPlainText().isEmpty()) {
+        textDisplay_->setText(model_->targetText());
+    }
+}
+
+void TypingTestWindow::onFinished() {
+    inputEdit_->setReadOnly(true);
 }
 
 void TypingTestWindow::resetTest() {
-    timer_->stop();
-    isRunning_ = false;
-    elapsedSeconds_ = 0;
-    
-    targetText_ = generateQuote();
-    textDisplay_->setText(targetText_);
-    
+    model_->reset();
+    inputEdit_->setReadOnly(false);
     inputEdit_->blockSignals(true);
     inputEdit_->clear();
     inputEdit_->blockSignals(false);
-    
-    wpmLabel_->setText("0");
-    accuracyLabel_->setText("100%");
-    timeLabel_->setText("0");
-    
     inputEdit_->setFocus();
 }
 
 void TypingTestWindow::checkTyping() {
-    QString typed = inputEdit_->toPlainText();
-    
-    if (!isRunning_ && !typed.isEmpty()) {
-        isRunning_ = true;
-        timer_->start();
-    }
+    const QString typed = inputEdit_->toPlainText();
+    model_->updateInput(typed);
 
+    const QString targetText = model_->targetText();
     const bool dark = ThemeManager::instance().isDark();
-    const QString correctColor = dark ? "#f472b6" : "#f43f5e"; // Pinkish highlight for correct
-    const QString wrongColor = dark ? "#ef4444" : "#dc2626"; // Red for errors
-    const QString pendingColor = dark ? "#64748b" : "#94a3b8"; // Gray for untyped
+    const QString correctColor = dark ? "#f472b6" : "#f43f5e";
+    const QString wrongColor = dark ? "#ef4444" : "#dc2626";
+    const QString pendingColor = dark ? "#64748b" : "#94a3b8";
     
     QString html = "<div style='line-height:1.4; white-space:pre-wrap;'>";
-    int correctCount = 0;
-
-    for (int i = 0; i < targetText_.length(); ++i) {
-        QChar targetChar = targetText_[i];
-        
+    for (int i = 0; i < targetText.length(); ++i) {
+        const QChar targetChar = targetText.at(i);
         if (i < typed.length()) {
-            QChar typedChar = typed[i];
-            if (typedChar == targetChar) { 
-                correctCount++;
-                html += QString("<span style='color:%1; font-weight:bold;'>%2</span>")
-                            .arg(correctColor)
-                            .arg(targetChar == ' ' ? " " : QString(targetChar));
+            if (typed.at(i) == targetChar) { 
+                html += QString("<span style='color:%1; font-weight:bold;'>%2</span>").arg(correctColor).arg(targetChar == ' ' ? " " : QString(targetChar));
             } else {
-                html += QString("<span style='background-color:%1; color:white; border-radius:4px;'>%2</span>")
-                            .arg(wrongColor)
-                            .arg(targetChar == ' ' ? "_" : QString(targetChar));
+                html += QString("<span style='background-color:%1; color:white; border-radius:4px;'>%2</span>").arg(wrongColor).arg(targetChar == ' ' ? "_" : QString(targetChar));
             }
         } else {
-            html += QString("<span style='color:%1;'>%2</span>")
-                        .arg(pendingColor)
-                        .arg(targetChar == ' ' ? " " : QString(targetChar));
+            html += QString("<span style='color:%1;'>%2</span>").arg(pendingColor).arg(targetChar == ' ' ? " " : QString(targetChar));
         }
     }
     html += "</div>";
 
-    // Update display
     textDisplay_->setHtml(html);
 
-    // ── Auto-scroll logic: Center current line ──────────────────────────────
     QTextCursor cursor = textDisplay_->textCursor();
-    cursor.setPosition(typed.length());
+    cursor.setPosition(static_cast<int>(typed.length()));
     textDisplay_->setTextCursor(cursor);
     
     const QRect cursorRect = textDisplay_->cursorRect(cursor);
     const int viewportHeight = textDisplay_->viewport()->height();
     const int currentScroll = textDisplay_->verticalScrollBar()->value();
-    
-    // Calculate new scroll position to keep cursor vertically centered
     const int targetScroll = currentScroll + (cursorRect.top() - viewportHeight / 2);
     textDisplay_->verticalScrollBar()->setValue(targetScroll);
-
-    // Calculate accuracy
-    int totalTyped = typed.length();
-    if (totalTyped > 0) {
-        int acc = (correctCount * 100) / totalTyped;
-        accuracyLabel_->setText(QString("%1%").arg(acc));
-    }
-
-    // Stop if reached the end
-    if (typed.length() >= targetText_.length()) {
-        timer_->stop();
-        isRunning_ = false;
-        inputEdit_->setReadOnly(true);
-        updateStats();
-    }
-}
-
-void TypingTestWindow::onTick() {
-    elapsedSeconds_++;
-    timeLabel_->setText(QString::number(elapsedSeconds_));
-    updateStats();
-}
-
-void TypingTestWindow::updateStats() {
-    if (elapsedSeconds_ == 0) return;
-    
-    QString typed = inputEdit_->toPlainText();
-    // Words per minute standard formula: (chars / 5) / (seconds / 60)
-    int charsTyped = typed.length();
-    double wpm = (charsTyped / 5.0) / (elapsedSeconds_ / 60.0);
-    
-    wpmLabel_->setText(QString::number(wpm, 'f', 1));
-
-    // Update best record if test is finished or currently better
-    if (wpm > bestWpm_) {
-        bestWpm_ = wpm;
-        bestWpmLabel_->setText(QString::number(bestWpm_, 'f', 1));
-        
-        QSettings settings;
-        settings.setValue("typing_test/best_wpm", bestWpm_);
-    }
 }

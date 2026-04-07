@@ -2,8 +2,9 @@
 
 #include <QMainWindow>
 #include <QVector>
-#include <QStringList>
-#include <QTimer>
+
+class MemoryMatchModel;
+class QLabel;
 
 class MemoryMatchWindow final : public QMainWindow {
     Q_OBJECT
@@ -16,27 +17,21 @@ protected:
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
 
-private:
-    struct Card {
-        Card() = default;
-        Card(const QString& e, bool f, bool m) : emoji(e), isFlipped(f), isMatched(m) {}
-
-        QString emoji;
-        bool isFlipped{ false };
-        bool isMatched{ false };
-    };
-
-    void setupUi();
+private slots:
+    void updateUi();
     void resetGame();
-    void checkMatch();
+    void onMatchResult(bool success, int idx1, int idx2);
+    void onGameOver();
+
+private:
+    void setupUi();
 
     static constexpr int kRows = 4;
     static constexpr int kCols = 4;
     static constexpr int kCellSize = 80;
 
-    QVector<Card> cards_;
+    MemoryMatchModel* model_{ nullptr };
     int firstFlippedIdx_{ -1 };
     int secondFlippedIdx_{ -1 };
     bool isProcessing_{ false };
-    int matchesFound_{ 0 };
 };

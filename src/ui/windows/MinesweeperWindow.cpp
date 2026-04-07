@@ -1,27 +1,29 @@
 #include "MinesweeperWindow.h"
+
 #include "../../core/ThemeManager.h"
-#include <cmath>
-#include <QPainter>
+#include "../../logic/MinesweeperModel.h"
+
 #include <QMouseEvent>
-#include <QRandomGenerator>
-#include <QPushButton>
+#include <QPainter>
 #include <QVBoxLayout>
 #include <QLabel>
+#include <QPushButton>
 
 MinesweeperWindow::MinesweeperWindow(QWidget* parent)
     : QMainWindow(parent),
-      board_(),
-      isGameOver_(false),
-      isWin_(false),
-      isFirstClick_(true),
-      flagsUsed_(0) {
+      model_(new MinesweeperModel(this)) {
     setupUi();
-    resetGame();
+    
+    connect(model_, &MinesweeperModel::updated, this, &MinesweeperWindow::updateUi);
+    connect(model_, &MinesweeperModel::flagsChanged, this, &MinesweeperWindow::onFlagsChanged);
+    connect(model_, &MinesweeperModel::gameOver, this, &MinesweeperWindow::onGameOver);
+
+    updateUi();
 }
 
 void MinesweeperWindow::setupUi() {
-    setWindowTitle("扫雷 - 甜心幻想");
-    setFixedSize(kCols * kCellSize + 80, kRows * kCellSize + 160);
+    setWindowTitle("扫雷 - 甜心幻想 (MVC)");
+    setFixedSize(model_->cols() * kCellSize + 80, model_->rows() * kCellSize + 160);
 
     const bool dark = ThemeManager::instance().isDark();
     setStyleSheet(dark 
@@ -34,7 +36,7 @@ void MinesweeperWindow::setupUi() {
     layout->setContentsMargins(40, 20, 40, 20);
     layout->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
 
-    auto* statusLabel = new QLabel("🚩: 0 / 💣: 12", this);
+    auto* statusLabel = new QLabel(QString("🚩: 0 / 💣: %1").arg(model_->totalMines()), this);
     statusLabel->setObjectName("statusLabel");
     statusLabel->setAlignment(Qt::AlignCenter);
     statusLabel->setStyleSheet(dark 
@@ -56,94 +58,21 @@ void MinesweeperWindow::setupUi() {
 }
 
 void MinesweeperWindow::resetGame() {
-    board_ = QVector<QVector<Cell>>(kRows, QVector<Cell>(kCols));
-    isGameOver_ = false;
-    isWin_ = false;
-    isFirstClick_ = true;
-    flagsUsed_ = 0;
+    model_->reset();
+}
+
+void MinesweeperWindow::onFlagsChanged(int count) {
+    if (auto status = centralWidget()->findChild<QLabel*>("statusLabel")) {
+        status->setText(QString("🚩: %1 / 💣: %2").arg(count).arg(model_->totalMines()));
+    }
+}
+
+void MinesweeperWindow::onGameOver(bool win) {
     update();
 }
 
-void MinesweeperWindow::generateMines(int excludeR, int excludeC) {
-    // Place mines randomly
-    int m = 0;
-    while (m < kMines) {
-        int r = QRandomGenerator::global()->bounded(kRows);
-        int c = QRandomGenerator::global()->bounded(kCols);
-        
-        // Don't place mine on the first clicked cell or its immediate neighbors
-        // to give a small safe opening area.
-        if (std::abs(r - excludeR) <= 1 && std::abs(c - excludeC) <= 1) continue;
-
-        if (!board_[r][c].isMine) {
-            board_[r][c].isMine = true;
-            m++;
-        }
-    }
-
-    // Calculate numbers
-    for (int r = 0; r < kRows; ++r) {
-        for (int c = 0; c < kCols; ++c) {
-            if (!board_[r][c].isMine) {
-                board_[r][c].adjacentMines = countMines(r, c);
-            }
-        }
-    }
-    isFirstClick_ = false;
-}
-
-int MinesweeperWindow::countMines(int r, int c) const {
-    int n = 0;
-    for (int dr = -1; dr <= 1; ++dr) {
-        for (int dc = -1; dc <= 1; ++dc) {
-            int nr = r + dr, nc = c + dc;
-            if (nr >= 0 && nr < kRows && nc >= 0 && nc < kCols && board_[nr][nc].isMine) n++;
-        }
-    }
-    return n;
-}
-
-void MinesweeperWindow::revealCell(int r, int c) {
-    if (r < 0 || r >= kRows || c < 0 || c >= kCols) return;
-    if (board_[r][c].isRevealed || board_[r][c].isFlagged) return;
-
-    board_[r][c].isRevealed = true;
-    if (board_[r][c].isMine) {
-        explodeMine(r, c);
-        return;
-    }
-
-    if (board_[r][c].adjacentMines == 0) {
-        for (int dr = -1; dr <= 1; ++dr) {
-            for (int dc = -1; dc <= 1; ++dc) {
-                if (dr == 0 && dc == 0) continue;
-                revealCell(r + dr, c + dc);
-            }
-        }
-    }
-    checkWin();
-}
-
-void MinesweeperWindow::explodeMine(int r, int c) {
-    isGameOver_ = true;
-    for (int i = 0; i < kRows; ++i) {
-        for (int j = 0; j < kCols; ++j) {
-            if (board_[i][j].isMine) board_[i][j].isRevealed = true;
-        }
-    }
-}
-
-void MinesweeperWindow::checkWin() {
-    int revealedCount = 0;
-    for (int r = 0; r < kRows; ++r) {
-        for (int c = 0; c < kCols; ++c) {
-            if (board_[r][c].isRevealed && !board_[r][c].isMine) revealedCount++;
-        }
-    }
-    if (revealedCount == (kRows * kCols - kMines)) {
-        isWin_ = true;
-        isGameOver_ = true;
-    }
+void MinesweeperWindow::updateUi() {
+    update();
 }
 
 void MinesweeperWindow::paintEvent(QPaintEvent* event) {
@@ -155,15 +84,14 @@ void MinesweeperWindow::paintEvent(QPaintEvent* event) {
     const QColor unrevealedBg = dark ? QColor(76, 5, 25) : QColor(255, 228, 230);
     const QColor revealedBg   = dark ? QColor(58, 28, 54) : QColor(255, 250, 255);
     const QColor flagColor     = QColor(244, 63, 94);
-    const QColor mineColor     = QColor(31, 41, 55);
 
-    const int offsetX = 40;
-    const int offsetY = 120;
+    const int offsetX = 40, offsetY = 120;
+    const auto& board = model_->board();
 
-    for (int r = 0; r < kRows; ++r) {
-        for (int c = 0; c < kCols; ++c) {
+    for (int r = 0; r < model_->rows(); ++r) {
+        for (int c = 0; c < model_->cols(); ++c) {
             QRect rect(offsetX + c * kCellSize, offsetY + r * kCellSize, kCellSize - 4, kCellSize - 4);
-            const Cell& cell = board_[r][c];
+            const auto& cell = board[r][c];
 
             if (!cell.isRevealed) {
                 painter.setBrush(unrevealedBg);
@@ -188,40 +116,30 @@ void MinesweeperWindow::paintEvent(QPaintEvent* event) {
         }
     }
 
-    if (isGameOver_) {
+    if (model_->isGameOver()) {
         painter.setBrush(QColor(0, 0, 0, 100));
         painter.drawRect(this->rect());
         painter.setPen(Qt::white);
         QFont f = painter.font(); f.setPointSize(24); f.setBold(true); painter.setFont(f);
-        painter.drawText(this->rect(), Qt::AlignCenter, isWin_ ? "太棒了！你赢了 🎉" : "轰隆！踩到雷了 💥");
-    }
-    
-    if (auto status = centralWidget()->findChild<QLabel*>("statusLabel")) {
-        status->setText(QString("🚩: %1 / 💣: %2").arg(flagsUsed_).arg(kMines));
+        painter.drawText(this->rect(), Qt::AlignCenter, model_->isWin() ? "太棒了！你赢了 🎉" : "轰隆！踩到雷了 💥");
     }
 }
 
 void MinesweeperWindow::mousePressEvent(QMouseEvent* event) {
-    if (isGameOver_) { resetGame(); return; }
+    if (model_->isGameOver()) { 
+        model_->reset();
+        return;
+    }
 
     int offsetX = 40, offsetY = 120;
     int c = (event->pos().x() - offsetX) / kCellSize;
     int r = (event->pos().y() - offsetY) / kCellSize;
 
-    if (r >= 0 && r < kRows && c >= 0 && c < kCols) {
+    if (r >= 0 && r < model_->rows() && c >= 0 && c < model_->cols()) {
         if (event->button() == Qt::LeftButton) {
-            if (isFirstClick_) {
-                generateMines(r, c);
-            }
-            revealCell(r, c);
+            model_->revealCell(r, c);
         } else if (event->button() == Qt::RightButton) {
-            if (!isFirstClick_) { // Can't flag before starting
-                if (!board_[r][c].isRevealed) {
-                    board_[r][c].isFlagged = !board_[r][c].isFlagged;
-                    flagsUsed_ += board_[r][c].isFlagged ? 1 : -1;
-                }
-            }
+            model_->toggleFlag(r, c);
         }
-        update();
     }
 }

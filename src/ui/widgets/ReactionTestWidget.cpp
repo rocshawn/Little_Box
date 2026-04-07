@@ -1,48 +1,31 @@
 #include "ReactionTestWidget.h"
 
+#include "../../logic/ReactionTestModel.h"
+
+#include <QBrush>
 #include <QColor>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPen>
 #include <QPoint>
-#include <QRandomGenerator>
 #include <QRect>
-#include <QSettings>
 #include <QStringList>
-#include <QTimer>
-#include <QtGlobal>
 
 #include <algorithm>
-#include <numeric>
 
 namespace {
-constexpr int kDelayMinMs = 2000;
-constexpr int kDelayMaxMs = 5000;
 constexpr int kChartTopFloorMs = 300;
 } // namespace
 
 ReactionTestWidget::ReactionTestWidget(QWidget* parent)
     : QWidget(parent),
-      waitTimer_(new QTimer(this)),
-      reactionTimer_(),
-      roundTimesMs_(),
-      state_(State::ReadyToStart),
-      clickedTooEarly_(false),
-      averageMs_(-1),
-      bestAverageMs_(-1),
-      isNewRecord_(false) {
+      model_(new ReactionTestModel(this)) {
     setMinimumHeight(320);
     setCursor(Qt::PointingHandCursor);
 
-    waitTimer_->setSingleShot(true);
-    connect(waitTimer_, &QTimer::timeout, this, &ReactionTestWidget::enterMeasuringState);
-
-    const QSettings settings;
-    const int savedBest = settings.value("reaction_test/best_average_ms", -1).toInt();
-    if (savedBest > 0) {
-        bestAverageMs_ = savedBest;
-    }
+    connect(model_, &ReactionTestModel::updated, this, &ReactionTestWidget::updateUi);
+    connect(model_, &ReactionTestModel::stateChanged, this, &ReactionTestWidget::updateUi);
 }
 
 void ReactionTestWidget::mousePressEvent(QMouseEvent* event) {
@@ -51,24 +34,7 @@ void ReactionTestWidget::mousePressEvent(QMouseEvent* event) {
         return;
     }
 
-    switch (state_) {
-    case State::ReadyToStart:
-        clickedTooEarly_ = false;
-        startRoundCountdown();
-        break;
-    case State::WaitingGreen:
-        clickedTooEarly_ = true;
-        startRoundCountdown();
-        break;
-    case State::Measuring:
-        completeCurrentRound();
-        break;
-    case State::Finished:
-        resetSession();
-        startRoundCountdown();
-        break;
-    }
-
+    model_->handleInteraction();
     event->accept();
 }
 
@@ -79,7 +45,7 @@ void ReactionTestWidget::paintEvent(QPaintEvent* event) {
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.setRenderHint(QPainter::TextAntialiasing, true);
 
-    const QColor background = state_ == State::Measuring ? QColor(34, 197, 94) : QColor(220, 38, 38);
+    const QColor background = model_->state() == ReactionTestModel::State::Measuring ? QColor(34, 197, 94) : QColor(220, 38, 38);
     painter.setPen(Qt::NoPen);
     painter.setBrush(background);
     painter.drawRoundedRect(rect().adjusted(1, 1, -1, -1), 20, 20);
@@ -120,110 +86,46 @@ void ReactionTestWidget::paintEvent(QPaintEvent* event) {
     drawChart(painter, chartRect);
 }
 
-void ReactionTestWidget::startRoundCountdown() {
-    state_ = State::WaitingGreen;
-    waitTimer_->stop();
-
-    const int delayMs = QRandomGenerator::global()->bounded(kDelayMinMs, kDelayMaxMs + 1);
-    waitTimer_->start(delayMs);
-
-    update();
-}
-
-void ReactionTestWidget::enterMeasuringState() {
-    state_ = State::Measuring;
-    clickedTooEarly_ = false;
-    reactionTimer_.restart();
-    update();
-}
-
-void ReactionTestWidget::completeCurrentRound() {
-    if (!reactionTimer_.isValid()) {
-        return;
-    }
-
-    roundTimesMs_.append(static_cast<int>(reactionTimer_.elapsed()));
-
-    if (roundTimesMs_.size() >= kTotalRounds) {
-        finalizeSession();
-    } else {
-        state_ = State::ReadyToStart;
-    }
-
-    update();
-}
-
-void ReactionTestWidget::finalizeSession() {
-    waitTimer_->stop();
-    state_ = State::Finished;
-    isNewRecord_ = false;
-
-    if (roundTimesMs_.isEmpty()) {
-        averageMs_ = -1;
-        return;
-    }
-
-    const int total = std::accumulate(roundTimesMs_.cbegin(), roundTimesMs_.cend(), 0);
-    averageMs_ = qRound(static_cast<double>(total) / static_cast<double>(roundTimesMs_.size()));
-
-    if (averageMs_ > 0 && (bestAverageMs_ < 0 || averageMs_ < bestAverageMs_)) {
-        bestAverageMs_ = averageMs_;
-        isNewRecord_ = true;
-
-        QSettings settings;
-        settings.setValue("reaction_test/best_average_ms", bestAverageMs_);
-    }
-}
-
-void ReactionTestWidget::resetSession() {
-    waitTimer_->stop();
-    reactionTimer_.invalidate();
-    roundTimesMs_.clear();
-    state_ = State::ReadyToStart;
-    clickedTooEarly_ = false;
-    averageMs_ = -1;
-    isNewRecord_ = false;
+void ReactionTestWidget::updateUi() {
     update();
 }
 
 QString ReactionTestWidget::buildMainText() const {
-    const int finishedRounds = roundTimesMs_.size();
-    const int currentRound = std::min(finishedRounds + 1, kTotalRounds);
+    const int finishedRounds = static_cast<int>(model_->roundTimesMs().size());
+    const int currentRound = std::min(finishedRounds + 1, model_->totalRounds());
 
-    if (state_ == State::ReadyToStart) {
+    if (model_->state() == ReactionTestModel::State::ReadyToStart) {
         if (finishedRounds == 0) {
             return "点击任意地方开始测试，屏幕变绿后点击";
         }
-
         return QString("第 %1 轮：%2 ms，点击开始第 %3 轮")
             .arg(finishedRounds)
-            .arg(roundTimesMs_.last())
+            .arg(model_->roundTimesMs().last())
             .arg(currentRound);
     }
 
-    if (state_ == State::WaitingGreen) {
-        if (clickedTooEarly_) {
+    if (model_->state() == ReactionTestModel::State::WaitingGreen) {
+        if (model_->clickedTooEarly()) {
             return QString("太快了，请等待屏幕变绿后再点击（第 %1 轮）").arg(currentRound);
         }
-
         return QString("第 %1 轮准备中，屏幕变绿后点击").arg(currentRound);
     }
 
-    if (state_ == State::Measuring) {
+    if (model_->state() == ReactionTestModel::State::Measuring) {
         return QString("第 %1 轮开始，立即点击").arg(currentRound);
     }
 
-    return QString("五轮完成，平均 %1 ms。点击重新开始").arg(averageMs_);
+    return QString("五轮完成，平均 %1 ms。点击重新开始").arg(model_->averageMs());
 }
 
 QString ReactionTestWidget::buildProgressText() const {
-    QString text = QString("进度：%1/%2").arg(roundTimesMs_.size()).arg(kTotalRounds);
+    QString text = QString("进度：%1/%2").arg(static_cast<int>(model_->roundTimesMs().size())).arg(model_->totalRounds());
 
-    if (bestAverageMs_ > 0) {
-        text += QString("   本地最佳平均：%1 ms").arg(bestAverageMs_);
+    if (model_->bestAverageMs() > 0) {
+        text += QString("   本地最佳平均：%1 ms").arg(model_->bestAverageMs());
     }
 
-    if (state_ == State::Finished && isNewRecord_) {
+    if (model_->state() == ReactionTestModel::State::Finished && model_->isNewRecord()) {
         text += "   新纪录";
     }
 
@@ -231,29 +133,25 @@ QString ReactionTestWidget::buildProgressText() const {
 }
 
 QString ReactionTestWidget::buildRoundHistoryText() const {
-    if (roundTimesMs_.isEmpty()) {
+    if (model_->roundTimesMs().isEmpty()) {
         return "本次成绩：暂无";
     }
 
     QStringList pieces;
-    pieces.reserve(roundTimesMs_.size());
+    pieces.reserve(static_cast<int>(model_->roundTimesMs().size()));
 
-    for (int i = 0; i < roundTimesMs_.size(); ++i) {
-        pieces.push_back(QString("R%1 %2").arg(i + 1).arg(roundTimesMs_.at(i)));
+    for (int i = 0; i < model_->roundTimesMs().size(); ++i) {
+        pieces.push_back(QString("R%1 %2").arg(i + 1).arg(model_->roundTimesMs().at(i)));
     }
 
     return "本次成绩：" + pieces.join(" ms  |  ") + " ms";
 }
 
 void ReactionTestWidget::drawChart(QPainter& painter, const QRect& panelRect) const {
-    if (panelRect.width() < 80 || panelRect.height() < 80) {
-        return;
-    }
+    if (panelRect.width() < 80 || panelRect.height() < 80) return;
 
     const QRect plotRect = panelRect.adjusted(34, 8, -12, -28);
-    if (plotRect.width() <= 0 || plotRect.height() <= 0) {
-        return;
-    }
+    if (plotRect.width() <= 0 || plotRect.height() <= 0) return;
 
     painter.setPen(QPen(QColor(148, 163, 184), 1));
     painter.drawLine(plotRect.bottomLeft(), plotRect.bottomRight());
@@ -265,41 +163,43 @@ void ReactionTestWidget::drawChart(QPainter& painter, const QRect& panelRect) co
     painter.setFont(axisFont);
     painter.setPen(QColor(71, 85, 105));
 
-    for (int round = 1; round <= kTotalRounds; ++round) {
-        const double ratio = kTotalRounds == 1 ? 0.0 : static_cast<double>(round - 1) / static_cast<double>(kTotalRounds - 1);
+    const int total = model_->totalRounds();
+    for (int round = 1; round <= total; ++round) {
+        const double ratio = total == 1 ? 0.0 : static_cast<double>(round - 1) / static_cast<double>(total - 1);
         const int x = plotRect.left() + qRound(ratio * plotRect.width());
         painter.drawLine(QPoint(x, plotRect.bottom()), QPoint(x, plotRect.bottom() + 4));
         painter.drawText(QRect(x - 8, plotRect.bottom() + 6, 16, 16), Qt::AlignCenter, QString::number(round));
     }
 
-    if (roundTimesMs_.isEmpty()) {
+    if (model_->roundTimesMs().isEmpty()) {
         painter.drawText(plotRect, Qt::AlignCenter, "完成至少 1 轮后显示折线图");
         return;
     }
 
-    const int maxRound = *std::max_element(roundTimesMs_.cbegin(), roundTimesMs_.cend());
+    const int maxRound = *std::max_element(model_->roundTimesMs().cbegin(), model_->roundTimesMs().cend());
     const int yMax = std::max(kChartTopFloorMs, maxRound + 50);
     painter.drawText(QRect(plotRect.left() - 30, plotRect.top() - 8, 28, 16), Qt::AlignRight | Qt::AlignVCenter, QString::number(yMax));
     painter.drawText(QRect(plotRect.left() - 30, plotRect.bottom() - 8, 28, 16), Qt::AlignRight | Qt::AlignVCenter, "0");
 
     QVector<QPoint> points;
-    points.reserve(roundTimesMs_.size());
-    for (int i = 0; i < roundTimesMs_.size(); ++i) {
-        const double ratioX = kTotalRounds == 1 ? 0.0 : static_cast<double>(i) / static_cast<double>(kTotalRounds - 1);
+    points.reserve(static_cast<int>(model_->roundTimesMs().size()));
+    for (int i = 0; i < model_->roundTimesMs().size(); ++i) {
+        const double ratioX = total == 1 ? 0.0 : static_cast<double>(i) / static_cast<double>(total - 1);
         const int x = plotRect.left() + qRound(ratioX * plotRect.width());
-        const double ratioY = static_cast<double>(roundTimesMs_.at(i)) / static_cast<double>(yMax);
+        const double ratioY = static_cast<double>(model_->roundTimesMs().at(i)) / static_cast<double>(yMax);
         const int y = plotRect.bottom() - qRound(ratioY * plotRect.height());
         points.push_back(QPoint(x, y));
     }
 
     painter.setPen(QPen(QColor(37, 99, 235), 2));
-    painter.drawPolyline(points.constData(), points.size());
+    painter.drawPolyline(points.constData(), static_cast<int>(points.size()));
 
     painter.setBrush(QColor(37, 99, 235));
     for (int i = 0; i < points.size(); ++i) {
-        painter.drawEllipse(points.at(i), 4, 4);
-        painter.drawText(QRect(points.at(i).x() - 18, points.at(i).y() - 22, 36, 16),
-            Qt::AlignCenter,
-            QString::number(roundTimesMs_.at(i)));
+        const auto& pt = points.at(i);
+        painter.drawEllipse(pt, 4, 4);
+        painter.drawText(QRect(pt.x() - 18, pt.y() - 22, 36, 16),
+             Qt::AlignCenter,
+             QString::number(model_->roundTimesMs().at(i)));
     }
 }

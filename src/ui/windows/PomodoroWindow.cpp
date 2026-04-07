@@ -1,6 +1,7 @@
 #include "PomodoroWindow.h"
 
 #include "../../core/ThemeManager.h"
+#include "../../logic/PomodoroModel.h"
 
 #include <QApplication>
 #include <QCloseEvent>
@@ -12,46 +13,34 @@
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QStyle>
-#include <QTimer>
 #include <QVBoxLayout>
-
-namespace {
-constexpr int kWorkSeconds = 25 * 60;
-constexpr int kBreakSeconds = 5 * 60;
-
-QString formatTime(int seconds) {
-    const int m = seconds / 60;
-    const int s = seconds % 60;
-    return QString("%1:%2").arg(m, 2, 10, QChar('0')).arg(s, 2, 10, QChar('0'));
-}
-} // namespace
 
 PomodoroWindow::PomodoroWindow(QWidget* parent)
     : QMainWindow(parent),
-      timer_(new QTimer(this)),
-      remainingSeconds_(kWorkSeconds),
-      isWorkMode_(true),
+      model_(new PomodoroModel(this)),
       isMiniMode_(false) {
     
     // As a top-level system tool window
     setWindowFlags(Qt::Window);
 
-    timer_->setInterval(1000);
-    connect(timer_, &QTimer::timeout, this, &PomodoroWindow::onTick);
-
     setupUi();
-    updateTimeDisplay();
+    
+    connect(model_, &PomodoroModel::timeUpdated, this, &PomodoroWindow::updateUi);
+    connect(model_, &PomodoroModel::modeChanged, this, &PomodoroWindow::updateUi);
+    connect(model_, &PomodoroModel::stateChanged, this, &PomodoroWindow::updateUi);
+    connect(model_, &PomodoroModel::finished, this, &PomodoroWindow::onTimerFinished);
+
+    updateUi();
 }
 
 void PomodoroWindow::setupUi() {
-    setWindowTitle("番茄钟");
+    setWindowTitle("番茄钟 (MVC)");
     setMinimumSize(400, 400);
     resize(400, 480);
 
     stackedWidget_ = new QStackedWidget(this);
     setCentralWidget(stackedWidget_);
 
-    // ── Setup both UI modes
     setupNormalUi();
     setupMiniUi();
 
@@ -59,7 +48,6 @@ void PomodoroWindow::setupUi() {
     stackedWidget_->addWidget(miniWidget_);
     stackedWidget_->setCurrentWidget(normalWidget_);
 
-    // ── Theme
     const bool dark = ThemeManager::instance().isDark();
     setStyleSheet(dark 
         ? "QMainWindow { background:qlineargradient(x1:0,y1:0,x2:0,y2:1, stop:0 #064e3b, stop:1 #065f46); }"
@@ -72,7 +60,6 @@ void PomodoroWindow::setupNormalUi() {
     layout->setContentsMargins(30, 40, 30, 30);
     layout->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
 
-    // Mode switch buttons
     auto* topControlsRow = new QHBoxLayout();
     workModeBtn_ = new QPushButton("专注模式");
     breakModeBtn_ = new QPushButton("休息模式");
@@ -85,9 +72,6 @@ void PomodoroWindow::setupNormalUi() {
     breakModeBtn_->setStyleSheet(btnStyle);
     workModeBtn_->setCursor(Qt::PointingHandCursor);
     breakModeBtn_->setCursor(Qt::PointingHandCursor);
-    
-    // Mark initial active
-    workModeBtn_->setProperty("active", true);
 
     topControlsRow->addStretch();
     topControlsRow->addWidget(workModeBtn_);
@@ -97,9 +81,7 @@ void PomodoroWindow::setupNormalUi() {
     layout->addLayout(topControlsRow);
     layout->addSpacing(40);
 
-    // Circular/Large Time Display Area
     const bool dark = ThemeManager::instance().isDark();
-    
     auto* timeFrame = new QFrame();
     timeFrame->setFixedSize(260, 260);
     timeFrame->setStyleSheet(dark 
@@ -109,11 +91,11 @@ void PomodoroWindow::setupNormalUi() {
     auto* timeLayout = new QVBoxLayout(timeFrame);
     timeLayout->setAlignment(Qt::AlignCenter);
 
-    normalStatusLabel_ = new QLabel("专注中...");
+    normalStatusLabel_ = new QLabel();
     normalStatusLabel_->setAlignment(Qt::AlignCenter);
     normalStatusLabel_->setStyleSheet(dark ? "color:#5eead4; font-size:16px; font-weight: bold;" : "color:#0d9488; font-size:16px; font-weight: bold;");
 
-    normalTimeLabel_ = new QLabel(formatTime(remainingSeconds_));
+    normalTimeLabel_ = new QLabel();
     normalTimeLabel_->setAlignment(Qt::AlignCenter);
     normalTimeLabel_->setStyleSheet(dark ? "color:#fff0f2; font-size:64px; font-weight: 900;" : "color:#0d9488; font-size:64px; font-weight: 900;");
     
@@ -122,10 +104,8 @@ void PomodoroWindow::setupNormalUi() {
     layout->addWidget(timeFrame, 0, Qt::AlignHCenter);
     layout->addSpacing(40);
 
-    // Play/Pause & Reset controls
     auto* mainControlsRow = new QHBoxLayout();
-    
-    normalPlayPauseBtn_ = new QPushButton("\xE2\x96\xB6"); // Play ▶
+    normalPlayPauseBtn_ = new QPushButton("\xE2\x96\xB6");
     normalPlayPauseBtn_->setFixedSize(60, 60);
     normalPlayPauseBtn_->setCursor(Qt::PointingHandCursor);
     normalPlayPauseBtn_->setStyleSheet(
@@ -133,7 +113,7 @@ void PomodoroWindow::setupNormalUi() {
         "QPushButton:hover { background: #0f766e; }"
     );
 
-    auto* resetBtn = new QPushButton("\xE2\x86\xBB"); // Reset ↻
+    auto* resetBtn = new QPushButton("\xE2\x86\xBB");
     resetBtn->setFixedSize(60, 60);
     resetBtn->setCursor(Qt::PointingHandCursor);
     resetBtn->setStyleSheet(
@@ -147,12 +127,10 @@ void PomodoroWindow::setupNormalUi() {
     mainControlsRow->addWidget(normalPlayPauseBtn_);
     mainControlsRow->addStretch();
     layout->addLayout(mainControlsRow);
-
     layout->addStretch();
 
-    // Mini Mode entry button at bottom right
     auto* bottomRow = new QHBoxLayout();
-    auto* miniBtn = new QPushButton("\xE2\x86\x99 小窗模式"); // ↙ Small window mode
+    auto* miniBtn = new QPushButton("\xE2\x86\x99 小窗模式");
     miniBtn->setCursor(Qt::PointingHandCursor);
     miniBtn->setStyleSheet(dark 
         ? "QPushButton { background: transparent; color: #99f6e4; font-weight: bold; font-size: 13px; border: none; }"
@@ -163,18 +141,15 @@ void PomodoroWindow::setupNormalUi() {
     bottomRow->addWidget(miniBtn);
     layout->addLayout(bottomRow);
 
-    // Connected signals
     connect(workModeBtn_, &QPushButton::clicked, this, [this]{ switchMode(true); });
     connect(breakModeBtn_, &QPushButton::clicked, this, [this]{ switchMode(false); });
-    connect(normalPlayPauseBtn_, &QPushButton::clicked, this, &PomodoroWindow::toggleTimer);
-    connect(resetBtn, &QPushButton::clicked, this, &PomodoroWindow::resetTimer);
+    connect(normalPlayPauseBtn_, &QPushButton::clicked, this, [this]{ model_->toggle(); });
+    connect(resetBtn, &QPushButton::clicked, this, [this]{ model_->reset(); });
     connect(miniBtn, &QPushButton::clicked, this, &PomodoroWindow::enterMiniMode);
 }
 
 void PomodoroWindow::setupMiniUi() {
     miniWidget_ = new QWidget(this);
-    
-    // Give mini background
     const bool dark = ThemeManager::instance().isDark();
     miniWidget_->setStyleSheet(dark 
         ? "QWidget { background: #064e3b; border: 2px solid #065f46; border-radius: 20px; }"
@@ -184,7 +159,7 @@ void PomodoroWindow::setupMiniUi() {
     layout->setContentsMargins(14, 8, 14, 8);
     layout->setSpacing(12);
 
-    miniTimeLabel_ = new QLabel(formatTime(remainingSeconds_), miniWidget_);
+    miniTimeLabel_ = new QLabel(miniWidget_);
     miniTimeLabel_->setStyleSheet(dark 
         ? "color:#fff0f2; font-size:24px; font-weight: 900; background: transparent; border: none;" 
         : "color:#0d9488; font-size:24px; font-weight: 900; background: transparent; border: none;");
@@ -197,7 +172,7 @@ void PomodoroWindow::setupMiniUi() {
         "QPushButton:hover { background: #0f766e; }"
     );
 
-    auto* exitMiniBtn = new QPushButton("\xE2\x86\x97", miniWidget_); // ↗ Expand
+    auto* exitMiniBtn = new QPushButton("\xE2\x86\x97", miniWidget_);
     exitMiniBtn->setFixedSize(32, 32);
     exitMiniBtn->setCursor(Qt::PointingHandCursor);
     exitMiniBtn->setStyleSheet(dark
@@ -210,129 +185,64 @@ void PomodoroWindow::setupMiniUi() {
     layout->addWidget(miniPlayPauseBtn_);
     layout->addWidget(exitMiniBtn);
 
-    connect(miniPlayPauseBtn_, &QPushButton::clicked, this, &PomodoroWindow::toggleTimer);
+    connect(miniPlayPauseBtn_, &QPushButton::clicked, this, [this]{ model_->toggle(); });
     connect(exitMiniBtn, &QPushButton::clicked, this, &PomodoroWindow::exitMiniMode);
 }
 
-void PomodoroWindow::onTick() {
-    if (remainingSeconds_ > 0) {
-        remainingSeconds_--;
-        updateTimeDisplay();
-    } else {
-        timerFinished();
-    }
+void PomodoroWindow::onTimerFinished() {
+    QMessageBox::information(this, 
+                             model_->isWorkMode() ? "专注结束" : "休息结束", 
+                             model_->isWorkMode() ? "太棒了！休息一下吧。" : "休息结束，可以开始下一个番茄钟了。");
 }
 
-void PomodoroWindow::toggleTimer() {
-    if (timer_->isActive()) {
-        timer_->stop();
-        normalPlayPauseBtn_->setText("\xE2\x96\xB6");
-        miniPlayPauseBtn_->setText("\xE2\x96\xB6");
-        normalStatusLabel_->setText(isWorkMode_ ? "已暂停" : "休息已暂停");
-    } else {
-        if (remainingSeconds_ == 0) {
-            resetTimer(); // Restart if finished
-        }
-        timer_->start();
-        normalPlayPauseBtn_->setText("\xE2\x9D\x9A"); // ❚❚
-        miniPlayPauseBtn_->setText("\xE2\x9D\x9A");
-        normalStatusLabel_->setText(isWorkMode_ ? "专注中..." : "休息中...");
-    }
+void PomodoroWindow::switchMode(bool isWork) {
+    model_->setMode(isWork);
 }
 
-void PomodoroWindow::resetTimer() {
-    timer_->stop();
-    remainingSeconds_ = isWorkMode_ ? kWorkSeconds : kBreakSeconds;
-    normalPlayPauseBtn_->setText("\xE2\x96\xB6");
-    miniPlayPauseBtn_->setText("\xE2\x96\xB6");
-    normalStatusLabel_->setText(isWorkMode_ ? "准备专注" : "准备休息");
-    updateTimeDisplay();
-}
+void PomodoroWindow::updateUi() {
+    const QString clockTxt = model_->formattedTime();
+    normalTimeLabel_->setText(clockTxt);
+    miniTimeLabel_->setText(clockTxt);
+    normalStatusLabel_->setText(model_->statusText());
 
-void PomodoroWindow::switchMode(const bool isWorkMode) {
-    if (isWorkMode_ == isWorkMode) return;
-    
-    isWorkMode_ = isWorkMode;
-    workModeBtn_->setProperty("active", isWorkMode);
-    breakModeBtn_->setProperty("active", !isWorkMode);
+    // Play/Pause Icon (▶ ❚❚)
+    const QString playIcon = model_->isRunning() ? "\xE2\x9D\x9A" : "\xE2\x96\xB6";
+    normalPlayPauseBtn_->setText(playIcon);
+    miniPlayPauseBtn_->setText(playIcon);
 
-    // Refresh styling dynamically
+    // Mode Buttons Property
+    workModeBtn_->setProperty("active", model_->isWorkMode());
+    breakModeBtn_->setProperty("active", !model_->isWorkMode());
     workModeBtn_->style()->unpolish(workModeBtn_);
     workModeBtn_->style()->polish(workModeBtn_);
     breakModeBtn_->style()->unpolish(breakModeBtn_);
     breakModeBtn_->style()->polish(breakModeBtn_);
-
-    resetTimer();
-}
-
-void PomodoroWindow::updateTimeDisplay() {
-    const QString txt = formatTime(remainingSeconds_);
-    normalTimeLabel_->setText(txt);
-    miniTimeLabel_->setText(txt);
-}
-
-void PomodoroWindow::timerFinished() {
-    timer_->stop();
-    normalPlayPauseBtn_->setText("\xE2\x96\xB6");
-    miniPlayPauseBtn_->setText("\xE2\x96\xB6");
-    normalStatusLabel_->setText(isWorkMode_ ? "专注完成！" : "休息结束！");
-
-    // Standard QMessageBox makes the system warning sound automatically
-    QMessageBox::information(this, 
-                             isWorkMode_ ? "专注结束" : "休息结束", 
-                             isWorkMode_ ? "太棒了！休息一下吧。" : "休息结束，可以开始下一个番茄钟了。");
 }
 
 void PomodoroWindow::enterMiniMode() {
     isMiniMode_ = true;
-    
-    // Hide MainWindow gracefully
-    if (parentWidget() && parentWidget()->isVisible()) {
-        parentWidget()->hide();
-    }
-
+    if (parentWidget() && parentWidget()->isVisible()) parentWidget()->hide();
     stackedWidget_->setCurrentWidget(miniWidget_);
-
-    // Apply frameless window flags + stays on top
     setWindowFlags(Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
-    
-    // Resize to fit the small widget properly
     setFixedSize(180, 56);
-
-    // Re-show window (required after flag changes on Windows)
     show();
 }
 
 void PomodoroWindow::exitMiniMode() {
     isMiniMode_ = false;
-
-    // Show MainWindow again
-    if (parentWidget() && parentWidget()->isHidden()) {
-        parentWidget()->showNormal();
-    }
-
+    if (parentWidget() && parentWidget()->isHidden()) parentWidget()->showNormal();
     stackedWidget_->setCurrentWidget(normalWidget_);
-
-    // Restore flags (remove frameless and topmost)
     setWindowFlags(Qt::Window);
-    
-    // Restore resizability and size
     setMinimumSize(400, 400);
-    setMaximumSize(16777215, 16777215); // Unset max fixed limits
+    setMaximumSize(16777215, 16777215);
     resize(400, 480);
-
     show();
 }
 
 void PomodoroWindow::closeEvent(QCloseEvent* event) {
-    // Before dying, if main window was hidden from our mini mode, restore it
-    if (parentWidget() && parentWidget()->isHidden()) {
-        parentWidget()->showNormal();
-    }
+    if (parentWidget() && parentWidget()->isHidden()) parentWidget()->showNormal();
     QMainWindow::closeEvent(event);
 }
-
-// ── Frameless Dragging Logic (Mini Mode only) ──
 
 void PomodoroWindow::mousePressEvent(QMouseEvent* event) {
     if (isMiniMode_ && event->button() == Qt::LeftButton) {

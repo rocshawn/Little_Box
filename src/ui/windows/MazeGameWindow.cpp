@@ -1,5 +1,7 @@
 #include "MazeGameWindow.h"
 
+#include "../../logic/MazeGameModel.h"
+
 #include <QColor>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -8,7 +10,6 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QPushButton>
-#include <QRandomGenerator>
 #include <QRectF>
 #include <QStatusBar>
 #include <QVBoxLayout>
@@ -25,33 +26,12 @@ const QColor kExitColor("#22c55e");
 const QColor kPlayerColor("#f97316");
 } // namespace
 
-
-MazeBoard::MazeBoard(QWidget* parent)
-    : QWidget(parent) {
+MazeBoard::MazeBoard(MazeGameModel* model, QWidget* parent)
+    : QWidget(parent), model_(model) {
     setFocusPolicy(Qt::StrongFocus);
     setMinimumSize(460, 460);
-    generateLevel();
+    connect(model_, &MazeGameModel::updated, this, [this](){ update(); });
 }
-
-void MazeBoard::setLevel(const int level) {
-    level_ = std::max(1, level);
-    generateLevel();
-    setFocus();
-}
-
-int MazeBoard::currentLevel() const noexcept {
-    return level_;
-}
-
-void MazeBoard::restartLevel() {
-    generateLevel();
-    setFocus();
-}
-
-void MazeBoard::setLevelCompletedCallback(std::function<void()> callback) {
-    onLevelCompleted_ = callback;
-}
-
 
 void MazeBoard::paintEvent(QPaintEvent* event) {
     Q_UNUSED(event);
@@ -60,12 +40,13 @@ void MazeBoard::paintEvent(QPaintEvent* event) {
     painter.setRenderHint(QPainter::Antialiasing, true);
     painter.fillRect(rect(), kBackgroundColor);
 
-    if (walls_.isEmpty()) {
+    const auto& walls = model_->walls();
+    if (walls.isEmpty()) {
         return;
     }
 
-    const int rows = walls_.size();
-    const int columns = walls_.front().size();
+    const int rows = walls.size();
+    const int columns = walls.front().size();
     const qreal cellSize = std::min((width() - kBoardMargin * 2.0) / columns, (height() - kBoardMargin * 2.0) / rows);
     const qreal offsetX = (width() - columns * cellSize) / 2.0;
     const qreal offsetY = (height() - rows * cellSize) / 2.0;
@@ -77,10 +58,10 @@ void MazeBoard::paintEvent(QPaintEvent* event) {
     for (int row = 0; row < rows; ++row) {
         for (int column = 0; column < columns; ++column) {
             const QRectF cellRect(offsetX + column * cellSize, offsetY + row * cellSize, cellSize, cellSize);
-            painter.setBrush(walls_[row][column] ? kWallColor : kPathColor);
+            painter.setBrush(walls[row][column] ? kWallColor : kPathColor);
             painter.drawRect(cellRect);
 
-            if (QPoint(column, row) == exitCell_) {
+            if (QPoint(column, row) == model_->exitCell()) {
                 painter.setBrush(kExitColor);
                 painter.drawRoundedRect(cellRect.adjusted(cellSize * 0.16, cellSize * 0.16, -cellSize * 0.16, -cellSize * 0.16), 8, 8);
             }
@@ -88,8 +69,8 @@ void MazeBoard::paintEvent(QPaintEvent* event) {
     }
 
     const QRectF playerRect(
-        offsetX + playerCell_.x() * cellSize + cellSize * 0.18,
-        offsetY + playerCell_.y() * cellSize + cellSize * 0.18,
+        offsetX + model_->playerCell().x() * cellSize + cellSize * 0.18,
+        offsetY + model_->playerCell().y() * cellSize + cellSize * 0.18,
         cellSize * 0.64,
         cellSize * 0.64);
 
@@ -99,156 +80,53 @@ void MazeBoard::paintEvent(QPaintEvent* event) {
 
 void MazeBoard::keyPressEvent(QKeyEvent* event) {
     switch (event->key()) {
-    case Qt::Key_Up:
-        tryMove(0, -1);
-        break;
-    case Qt::Key_Down:
-        tryMove(0, 1);
-        break;
-    case Qt::Key_Left:
-        tryMove(-1, 0);
-        break;
-    case Qt::Key_Right:
-        tryMove(1, 0);
-        break;
+    case Qt::Key_Up:    model_->tryMove(0, -1); break;
+    case Qt::Key_Down:  model_->tryMove(0, 1); break;
+    case Qt::Key_Left:  model_->tryMove(-1, 0); break;
+    case Qt::Key_Right: model_->tryMove(1, 0); break;
     default:
         QWidget::keyPressEvent(event);
         return;
     }
-
     event->accept();
 }
 
-void MazeBoard::generateLevel() {
-    const int size = boardSizeForLevel(level_);
-    walls_ = QVector<QVector<bool>>(size, QVector<bool>(size, true));
-
-    QVector<QPoint> stack;
-    playerCell_ = QPoint(1, 1);
-    walls_[playerCell_.y()][playerCell_.x()] = false;
-    stack.append(playerCell_);
-
-    while (!stack.isEmpty()) {
-        const QPoint current = stack.back();
-        QVector<QPoint> directions{ QPoint(0, -2), QPoint(0, 2), QPoint(-2, 0), QPoint(2, 0) };
-
-        for (int index = directions.size() - 1; index > 0; --index) {
-            const int swapIndex = QRandomGenerator::global()->bounded(index + 1);
-            directions.swapItemsAt(index, swapIndex);
-        }
-
-        bool moved = false;
-        for (const QPoint& direction : directions) {
-            const QPoint next = current + direction;
-            if (next.x() <= 0 || next.y() <= 0 || next.x() >= size - 1 || next.y() >= size - 1) {
-                continue;
-            }
-
-            if (!walls_[next.y()][next.x()]) {
-                continue;
-            }
-
-            const QPoint midpoint(current.x() + direction.x() / 2, current.y() + direction.y() / 2);
-            walls_[midpoint.y()][midpoint.x()] = false;
-            walls_[next.y()][next.x()] = false;
-            stack.append(next);
-            moved = true;
-            break;
-        }
-
-        if (!moved) {
-            stack.removeLast();
-        }
-    }
-
-    exitCell_ = QPoint(size - 2, size - 2);
-    walls_[exitCell_.y()][exitCell_.x()] = false;
-    update();
-}
-
-void MazeBoard::tryMove(const int dx, const int dy) {
-    const QPoint target = playerCell_ + QPoint(dx, dy);
-    if (!isOpenCell(target)) {
-        return;
-    }
-
-    playerCell_ = target;
-    update();
-
-    if (playerCell_ == exitCell_ && onLevelCompleted_) {
-        onLevelCompleted_();
-    }
-}
-
-bool MazeBoard::isOpenCell(const QPoint& cell) const {
-    if (walls_.isEmpty() || walls_.front().isEmpty()) {
-        return false;
-    }
-
-    if (cell.y() < 0 || cell.y() >= walls_.size()) {
-        return false;
-    }
-
-    if (cell.x() < 0 || cell.x() >= walls_.front().size()) {
-        return false;
-    }
-
-    return !walls_[cell.y()][cell.x()];
-}
-
-int MazeBoard::boardSizeForLevel(const int level) const {
-    const int safeLevel = std::max(1, level);
-    return 13 + safeLevel * 2;
-}
-
 MazeGameWindow::MazeGameWindow(QWidget* parent)
-    : QMainWindow(parent) {
+    : QMainWindow(parent),
+      model_(new MazeGameModel(this)) {
     setupUi();
     setupConnections();
-    loadLevel(1);
+    updateLabels();
 }
 
 void MazeGameWindow::setupUi() {
-    setWindowTitle("迷宫闯关");
+    setWindowTitle("迷宫闯关 (MVC)");
     setMinimumSize(760, 820);
     resize(840, 900);
 
     auto* centralWidget = new QWidget(this);
+    setCentralWidget(centralWidget);
     auto* rootLayout = new QVBoxLayout(centralWidget);
+    
     auto* headerCard = new QFrame(centralWidget);
-    auto* headerLayout = new QVBoxLayout(headerCard);
-    auto* infoLayout = new QHBoxLayout();
-    auto* actionLayout = new QHBoxLayout();
-
-    auto* titleLabel = new QLabel("迷宫闯关", headerCard);
-    auto* subtitleLabel = new QLabel("使用方向键控制小圆点，从入口移动到绿色出口。", headerCard);
-    levelLabel_ = new QLabel(headerCard);
-    hintLabel_ = new QLabel("共 10 关，地图会逐关变大，通关后自动进入下一关。", headerCard);
-    board_ = new MazeBoard(centralWidget);
-    restartButton_ = new QPushButton("重开本关", centralWidget);
-    closeButton_ = new QPushButton("关闭窗口", centralWidget);
-
-    titleLabel->setObjectName("titleLabel");
-    subtitleLabel->setObjectName("subtitleLabel");
-    levelLabel_->setObjectName("infoBadge");
-    hintLabel_->setObjectName("hintLabel");
-    restartButton_->setObjectName("primaryButton");
-    closeButton_->setObjectName("secondaryButton");
     headerCard->setObjectName("headerCard");
-
+    auto* headerLayout = new QVBoxLayout(headerCard);
+    
+    auto* titleLabel = new QLabel("迷宫闯关", headerCard);
+    titleLabel->setObjectName("titleLabel");
+    auto* subtitleLabel = new QLabel("使用方向键控制小圆点，从入口移动到绿色出口。", headerCard);
+    subtitleLabel->setObjectName("subtitleLabel");
     subtitleLabel->setWordWrap(true);
-    hintLabel_->setWordWrap(true);
-    restartButton_->setCursor(Qt::PointingHandCursor);
-    closeButton_->setCursor(Qt::PointingHandCursor);
-    restartButton_->setMinimumHeight(44);
-    closeButton_->setMinimumHeight(44);
 
+    auto* infoLayout = new QHBoxLayout();
+    levelLabel_ = new QLabel(headerCard);
+    levelLabel_->setObjectName("infoBadge");
     infoLayout->addWidget(levelLabel_, 0, Qt::AlignLeft);
     infoLayout->addStretch();
 
-    actionLayout->addWidget(restartButton_);
-    actionLayout->addWidget(closeButton_);
-    actionLayout->setSpacing(12);
+    hintLabel_ = new QLabel(headerCard);
+    hintLabel_->setObjectName("hintLabel");
+    hintLabel_->setWordWrap(true);
 
     headerLayout->addWidget(titleLabel);
     headerLayout->addWidget(subtitleLabel);
@@ -256,6 +134,23 @@ void MazeGameWindow::setupUi() {
     headerLayout->addLayout(infoLayout);
     headerLayout->addWidget(hintLabel_);
     headerLayout->setContentsMargins(24, 24, 24, 24);
+
+    board_ = new MazeBoard(model_, centralWidget);
+    
+    auto* actionLayout = new QHBoxLayout();
+    restartButton_ = new QPushButton("重开本关", centralWidget);
+    restartButton_->setObjectName("primaryButton");
+    restartButton_->setCursor(Qt::PointingHandCursor);
+    restartButton_->setMinimumHeight(44);
+    
+    closeButton_ = new QPushButton("关闭窗口", centralWidget);
+    closeButton_->setObjectName("secondaryButton");
+    closeButton_->setCursor(Qt::PointingHandCursor);
+    closeButton_->setMinimumHeight(44);
+
+    actionLayout->addWidget(restartButton_);
+    actionLayout->addWidget(closeButton_);
+    actionLayout->setSpacing(12);
 
     rootLayout->addWidget(headerCard);
     rootLayout->addWidget(board_, 1);
@@ -277,42 +172,35 @@ void MazeGameWindow::setupUi() {
         "QPushButton#secondaryButton:hover { background:#eef2ff; }"
     );
 
-    setCentralWidget(centralWidget);
     statusBar()->showMessage("方向键移动，抵达绿色出口即可进入下一关。");
 }
 
 void MazeGameWindow::setupConnections() {
-    board_->setLevelCompletedCallback([this]() {
-        handleLevelCompleted();
-    });
-
+    connect(model_, &MazeGameModel::levelCompleted, this, &MazeGameWindow::handleLevelCompleted);
+    connect(model_, &MazeGameModel::levelChanged, this, &MazeGameWindow::updateLabels);
+    
     connect(restartButton_, &QPushButton::clicked, this, [this]() {
-        board_->restartLevel();
-        statusBar()->showMessage(QString("已重置第 %1 关。继续前往出口。").arg(currentLevel_));
+        model_->restartLevel();
+        statusBar()->showMessage(QString("已重置第 %1 关。继续前往出口。").arg(model_->currentLevel()));
+        board_->setFocus();
     });
     connect(closeButton_, &QPushButton::clicked, this, &QWidget::close);
 }
 
-void MazeGameWindow::loadLevel(const int level) {
-    currentLevel_ = std::max(1, std::min(level, kTotalLevels));
-    board_->setLevel(currentLevel_);
-    updateLabels();
-    statusBar()->showMessage(QString("第 %1 关已载入，请使用方向键开始移动。").arg(currentLevel_));
-}
-
 void MazeGameWindow::handleLevelCompleted() {
-    if (currentLevel_ < kTotalLevels) {
-        QMessageBox::information(this, "通关成功", QString("已通过第 %1 关，即将进入第 %2 关。").arg(currentLevel_).arg(currentLevel_ + 1));
-        loadLevel(currentLevel_ + 1);
-        return;
+    int level = model_->currentLevel();
+    if (level < model_->totalLevels()) {
+        QMessageBox::information(this, "通关成功", QString("已通过第 %1 关，即将进入第 %2 关。").arg(level).arg(level + 1));
+        model_->setLevel(level + 1);
+        statusBar()->showMessage(QString("第 %1 关已载入，请使用方向键开始移动。").arg(level + 1));
+    } else {
+        QMessageBox::information(this, "全部通关", "恭喜，你已完成全部 10 关迷宫挑战！将为你重新回到第 1 关。");
+        model_->setLevel(1);
     }
-
-    QMessageBox::information(this, "全部通关", "恭喜，你已完成全部 10 关迷宫挑战！将为你重新回到第 1 关。");
-    loadLevel(1);
+    board_->setFocus();
 }
 
 void MazeGameWindow::updateLabels() {
-    levelLabel_->setText(QString("当前关卡：%1 / %2").arg(currentLevel_).arg(kTotalLevels));
-    hintLabel_->setText(QString("地图尺寸：%1 × %1。随着关卡提升，迷宫会更大、更难。")
-        .arg(13 + currentLevel_ * 2));
+    levelLabel_->setText(QString("当前关卡：%1 / %2").arg(model_->currentLevel()).arg(model_->totalLevels()));
+    hintLabel_->setText(QString("地图尺寸：%1 × %1。随着关卡提升，迷宫会更大、更难。").arg(model_->boardSize()));
 }

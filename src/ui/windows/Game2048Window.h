@@ -3,6 +3,7 @@
 #include <QMainWindow>
 #include <QVector>
 
+class Game2048Model;
 class QGridLayout;
 class QLabel;
 
@@ -16,22 +17,17 @@ public:
 protected:
     void keyPressEvent(QKeyEvent* event) override;
 
-private:
-    enum class Direction { Up, Down, Left, Right };
-
-    void setupUi();
-    void resetGame();
-    void spawnRandomTile();
+private slots:
     void updateUi();
+    void resetGame();
+    void onGameOver();
+    void onGameWon();
+
+private:
+    void setupUi();
     QString colorForNumber(int num, bool darkTheme) const;
 
-    bool moveBoard(Direction dir);
-    bool slideArrayLeft(QVector<int>& line, int& scoreIncrease);
-    void rotateBoardClockwise();
-    bool isGameOver() const;
-
-    QVector<QVector<int>> board_;
-    int score_{ 0 };
+    Game2048Model* model_{ nullptr };
 
     QLabel* scoreLabel_{ nullptr };
     QLabel* statusLabel_{ nullptr };

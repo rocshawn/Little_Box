@@ -3,9 +3,9 @@
 #include <QMainWindow>
 #include <QPoint>
 
+class PomodoroModel;
 class QLabel;
 class QPushButton;
-class QTimer;
 class QStackedWidget;
 class QWidget;
 
@@ -22,10 +22,9 @@ protected:
     void closeEvent(QCloseEvent* event) override;
 
 private slots:
-    void onTick();
-    void toggleTimer();
-    void resetTimer();
-    void switchMode(bool isWorkMode);
+    void updateUi();
+    void onTimerFinished();
+    void switchMode(bool isWork);
     void enterMiniMode();
     void exitMiniMode();
 
@@ -33,9 +32,9 @@ private:
     void setupUi();
     void setupNormalUi();
     void setupMiniUi();
-    void updateTimeDisplay();
-    void timerFinished();
 
+    PomodoroModel* model_{ nullptr };
+    
     // UI Elements
     QStackedWidget* stackedWidget_{ nullptr };
     
@@ -52,12 +51,7 @@ private:
     QLabel* miniTimeLabel_{ nullptr };
     QPushButton* miniPlayPauseBtn_{ nullptr };
 
-    // State
-    QTimer* timer_{ nullptr };
-    int remainingSeconds_{ 25 * 60 };
-    bool isWorkMode_{ true };
+    // UI-only State
     bool isMiniMode_{ false };
-
-    // For frameless window dragging
     QPoint dragPosition_{};
 };

@@ -1,39 +1,17 @@
 #pragma once
 
 #include <QMainWindow>
-#include <QRectF>
 #include <QTimer>
-#include <QVector>
 #include <QWidget>
 
-#include <functional>
-#include <utility>
-
-
-class QKeyEvent;
+class FlappyBirdModel;
 class QLabel;
-class QMouseEvent;
 class QPushButton;
-class QResizeEvent;
-class QPaintEvent;
-
-struct FlappyPipe {
-    double x{ 0.0 };
-    double gapCenterY{ 0.0 };
-    bool scored{ false };
-};
-
 
 class FlappyBirdWidget final : public QWidget {
+    Q_OBJECT
 public:
-    explicit FlappyBirdWidget(QWidget* parent = nullptr);
-
-    void startNewGame();
-    int currentScore() const noexcept;
-    int bestScore() const noexcept;
-    bool hasStarted() const noexcept;
-    bool isGameOver() const noexcept;
-    void setStateChangedCallback(std::function<void()> callback);
+    explicit FlappyBirdWidget(FlappyBirdModel* model, QWidget* parent = nullptr);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -43,41 +21,29 @@ protected:
 
 private:
     void advanceFrame();
-    void flap();
-    void spawnPipe();
-    void loadBestScore();
-    void updateBestScoreIfNeeded();
-    void notifyStateChanged();
-    QRectF birdRect() const;
-    bool hitsPipe(const QRectF& bird, const FlappyPipe& pipe) const;
 
-
-    QTimer timer_;
-    QVector<FlappyPipe> pipes_;
-    std::function<void()> onStateChanged_;
-    double birdY_{ 240.0 };
-    double birdVelocity_{ 0.0 };
-
-    int frameCounter_{ 0 };
-    int score_{ 0 };
-    int bestScore_{ 0 };
-    bool started_{ false };
-    bool gameOver_{ false };
+    FlappyBirdModel* model_{ nullptr };
+    QTimer           timer_;
 };
 
 class FlappyBirdWindow final : public QMainWindow {
+    Q_OBJECT
 public:
     explicit FlappyBirdWindow(QWidget* parent = nullptr);
     ~FlappyBirdWindow() override = default;
 
+private slots:
+    void updateScorePanel();
+    void startNewGame();
+
 private:
     void setupUi();
-    void updateScorePanel();
 
+    FlappyBirdModel*  model_{ nullptr };
     FlappyBirdWidget* gameWidget_{ nullptr };
-    QLabel* scoreValueLabel_{ nullptr };
-    QLabel* bestScoreValueLabel_{ nullptr };
-    QLabel* stateLabel_{ nullptr };
-    QPushButton* restartButton_{ nullptr };
-    QPushButton* closeButton_{ nullptr };
+    QLabel*           scoreValueLabel_{ nullptr };
+    QLabel*           bestScoreValueLabel_{ nullptr };
+    QLabel*           stateLabel_{ nullptr };
+    QPushButton*      restartButton_{ nullptr };
+    QPushButton*      closeButton_{ nullptr };
 };

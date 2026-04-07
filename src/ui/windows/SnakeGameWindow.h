@@ -5,6 +5,9 @@
 #include <QPoint>
 #include <QTimer>
 
+class SnakeGameModel;
+class QLabel;
+
 class SnakeGameWindow final : public QMainWindow {
     Q_OBJECT
 
@@ -16,25 +19,18 @@ protected:
     void paintEvent(QPaintEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
 
+private slots:
+    void onModelUpdated();
+    void onScoreChanged(int score);
+    void onGameOver();
+
 private:
-    enum class Direction { Up, Down, Left, Right };
-
     void setupUi();
-    void resetGame();
-    void spawnFood();
-    void moveSnake();
-    void checkCollision();
-    void updateGame();
+    void startNewGame();
 
-    Direction currentDir_{ Direction::Right };
-    Direction nextDir_{ Direction::Right };
-    QList<QPoint> snake_;
-    QPoint food_;
-    int score_{ 0 };
-    bool isGameOver_{ false };
-    bool canUpdateDir_{ true };
-
-    QTimer* timer_{ nullptr };
+    SnakeGameModel* model_{ nullptr };
+    QTimer*         timer_{ nullptr };
+    QLabel*         scoreLabel_{ nullptr };
     
     static constexpr int kGridSize = 20;
     static constexpr int kCellSize = 22;
