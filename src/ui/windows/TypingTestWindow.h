@@ -17,6 +17,9 @@ public:
     explicit TypingTestWindow(QWidget* parent = nullptr);
     ~TypingTestWindow() override = default;
 
+protected:
+    void closeEvent(QCloseEvent* event) override;
+
 private slots:
     void updateUi();
     void onFinished();

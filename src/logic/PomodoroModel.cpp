@@ -72,3 +72,33 @@ void PomodoroModel::onTick() {
         emit finished();
     }
 }
+
+QJsonObject PomodoroModel::saveSession() const {
+    QJsonObject obj;
+    obj["remainingSeconds"] = remainingSeconds_;
+    obj["isWorkMode"] = isWorkMode_;
+    obj["isRunning"] = isRunning_;
+    return obj;
+}
+
+void PomodoroModel::restoreSession(const QJsonObject& data) {
+    if (data.contains("isWorkMode")) isWorkMode_ = data["isWorkMode"].toBool();
+    if (data.contains("remainingSeconds")) {
+        remainingSeconds_ = data["remainingSeconds"].toInt();
+    }
+    
+    emit modeChanged(isWorkMode_);
+    emit timeUpdated(remainingSeconds_);
+    
+    // Auto-resume if it was running? Usually we pause on restore.
+    // Let's keep it paused.
+    isRunning_ = false; 
+    emit stateChanged(isRunning_);
+}
+
+QJsonObject PomodoroModel::saveHistory() const {
+    return QJsonObject();
+}
+
+void PomodoroModel::restoreHistory(const QJsonObject& data) {
+}

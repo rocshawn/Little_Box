@@ -3,6 +3,8 @@
 #include <QObject>
 #include <QString>
 #include <QVector>
+#include <QJsonObject>
+#include "../core/ModuleInterfaces.h"
 
 struct MemoryCard {
     MemoryCard() = default;
@@ -13,7 +15,7 @@ struct MemoryCard {
     bool isMatched{ false };
 };
 
-class MemoryMatchModel final : public QObject {
+class MemoryMatchModel final : public QObject, public IStatefulModule, public IPausableModule {
     Q_OBJECT
 
 public:
@@ -32,6 +34,16 @@ public:
     void checkMatch(int idx1, int idx2);
     void resetFlippedCards(int idx1, int idx2);
 
+    // IStatefulModule
+    QJsonObject saveSession() const override;
+    void restoreSession(const QJsonObject& data) override;
+    QJsonObject saveHistory() const override;
+    void restoreHistory(const QJsonObject& data) override;
+
+    // IPausableModule
+    void pause() override { isPaused_ = true; }
+    void resume() override { isPaused_ = false; }
+
 signals:
     void updated();
     void cardFlipped(int index);
@@ -44,4 +56,5 @@ private:
 
     QVector<MemoryCard> cards_;
     int matchesFound_{ 0 };
+    bool isPaused_{ false };
 };

@@ -8,6 +8,7 @@
 class MazeGameModel;
 class QLabel;
 class QPushButton;
+class SessionOverlayWidget;
 
 class MazeBoard final : public QWidget {
     Q_OBJECT
@@ -28,15 +29,21 @@ public:
     explicit MazeGameWindow(QWidget* parent = nullptr);
     ~MazeGameWindow() override = default;
 
+protected:
+    void closeEvent(QCloseEvent* event) override;
+
 private slots:
     void handleLevelCompleted();
     void updateLabels();
+    void showOverlay();
+    void hideOverlay();
 
 private:
     void setupUi();
     void setupConnections();
 
     MazeGameModel* model_{ nullptr };
+    SessionOverlayWidget* overlay_{ nullptr };
     MazeBoard*     board_{ nullptr };
     QLabel*        levelLabel_{ nullptr };
     QLabel*        hintLabel_{ nullptr };

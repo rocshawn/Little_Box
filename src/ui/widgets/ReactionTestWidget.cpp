@@ -18,9 +18,9 @@ namespace {
 constexpr int kChartTopFloorMs = 300;
 } // namespace
 
-ReactionTestWidget::ReactionTestWidget(QWidget* parent)
+ReactionTestWidget::ReactionTestWidget(ReactionTestModel* model, QWidget* parent)
     : QWidget(parent),
-      model_(new ReactionTestModel(this)) {
+      model_(model) {
     setMinimumHeight(320);
     setCursor(Qt::PointingHandCursor);
 

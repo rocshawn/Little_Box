@@ -10,6 +10,7 @@
 #include "../ui/windows/FlappyBirdWindow.h"
 #include "../ui/windows/PomodoroWindow.h"
 #include "../ui/windows/ReactionTestWindow.h"
+#include "../ui/windows/WatermarkWindow.h"
 
 #include <QDesktopServices>
 #include <QInputDialog>
@@ -164,6 +165,21 @@ void ModuleRegistry::registerBuiltinModules() {
                     QMessageBox::Ok
                 );
             }
+        }
+    });
+
+    registerModule({
+        /* id          */ "watermark",
+        /* name        */ "图片水印",
+        /* description */ "给图片添加自定义文字水印，支持高品质导出",
+        /* emoji       */ "\xF0\x9F\x96\xBC",  // 🖼
+        /* category    */ ModuleCategory::Tools,
+        /* launchMode  */ LaunchMode::Window,
+        /* launcher    */ [this](QWidget* parent) {
+            auto* window = new WatermarkWindow(parent);
+            window->setAttribute(Qt::WA_DeleteOnClose);
+            openWindows_["watermark"] = window;
+            bringToFront(window);
         }
     });
 

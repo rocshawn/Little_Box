@@ -1,6 +1,8 @@
 #include "MazeGameWindow.h"
 
 #include "../../logic/MazeGameModel.h"
+#include "../../services/StorageService.h"
+#include "../widgets/SessionOverlayWidget.h"
 
 #include <QColor>
 #include <QFrame>
@@ -88,6 +90,10 @@ void MazeBoard::keyPressEvent(QKeyEvent* event) {
         QWidget::keyPressEvent(event);
         return;
     }
+    
+    // Prevent key press handled by overlay? Wait! MazeBoard is a subwidget
+    // Actually, MazeBoard shouldn't do anything if overlay is shown
+    
     event->accept();
 }
 
@@ -97,6 +103,13 @@ MazeGameWindow::MazeGameWindow(QWidget* parent)
     setupUi();
     setupConnections();
     updateLabels();
+
+    if (StorageService::instance().hasSession("maze_game")) {
+        model_->restoreSession(StorageService::instance().loadSession("maze_game"));
+        showOverlay();
+        updateLabels();
+        board_->update();
+    }
 }
 
 void MazeGameWindow::setupUi() {
@@ -180,6 +193,7 @@ void MazeGameWindow::setupConnections() {
     connect(model_, &MazeGameModel::levelChanged, this, &MazeGameWindow::updateLabels);
     
     connect(restartButton_, &QPushButton::clicked, this, [this]() {
+        StorageService::instance().clearSession("maze_game");
         model_->restartLevel();
         statusBar()->showMessage(QString("已重置第 %1 关。继续前往出口。").arg(model_->currentLevel()));
         board_->setFocus();
@@ -189,6 +203,7 @@ void MazeGameWindow::setupConnections() {
 
 void MazeGameWindow::handleLevelCompleted() {
     int level = model_->currentLevel();
+    StorageService::instance().clearSession("maze_game");
     if (level < model_->totalLevels()) {
         QMessageBox::information(this, "通关成功", QString("已通过第 %1 关，即将进入第 %2 关。").arg(level).arg(level + 1));
         model_->setLevel(level + 1);
@@ -203,4 +218,35 @@ void MazeGameWindow::handleLevelCompleted() {
 void MazeGameWindow::updateLabels() {
     levelLabel_->setText(QString("当前关卡：%1 / %2").arg(model_->currentLevel()).arg(model_->totalLevels()));
     hintLabel_->setText(QString("地图尺寸：%1 × %1。随着关卡提升，迷宫会更大、更难。").arg(model_->boardSize()));
+}
+
+void MazeGameWindow::showOverlay() {
+    model_->pause();
+    if (!overlay_) {
+        overlay_ = new SessionOverlayWidget(this);
+        connect(overlay_, &SessionOverlayWidget::continueRequested, this, &MazeGameWindow::hideOverlay);
+        connect(overlay_, &SessionOverlayWidget::restartRequested, this, [this]() {
+            hideOverlay();
+            StorageService::instance().clearSession("maze_game");
+            model_->restartLevel();
+            board_->setFocus();
+        });
+    }
+    overlay_->show();
+    overlay_->raise();
+}
+
+void MazeGameWindow::hideOverlay() {
+    model_->resume();
+    if (overlay_) {
+        overlay_->hide();
+    }
+    board_->setFocus();
+}
+
+void MazeGameWindow::closeEvent(QCloseEvent* event) {
+    if (model_->playerCell() != model_->exitCell()) {
+        StorageService::instance().saveSession("maze_game", model_->saveSession());
+    }
+    QMainWindow::closeEvent(event);
 }

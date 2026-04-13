@@ -2,8 +2,10 @@
 
 #include <QObject>
 #include <QVector>
+#include <QJsonObject>
+#include "../core/ModuleInterfaces.h"
 
-class Game2048Model final : public QObject {
+class Game2048Model final : public QObject, public IStatefulModule, public IPausableModule {
     Q_OBJECT
 
 public:
@@ -21,6 +23,15 @@ public:
     // Actions
     void reset();
     bool move(Direction dir);
+    // IStatefulModule
+    QJsonObject saveSession() const override;
+    void restoreSession(const QJsonObject& data) override;
+    QJsonObject saveHistory() const override;
+    void restoreHistory(const QJsonObject& data) override;
+
+    // IPausableModule
+    void pause() override {}
+    void resume() override {}
 
 signals:
     void updated();

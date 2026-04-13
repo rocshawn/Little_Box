@@ -3,6 +3,8 @@
 #include <QObject>
 #include <QRectF>
 #include <QVector>
+#include <QJsonObject>
+#include "../core/ModuleInterfaces.h"
 
 struct FlappyPipe {
     double x{ 0.0 };
@@ -10,7 +12,7 @@ struct FlappyPipe {
     bool scored{ false };
 };
 
-class FlappyBirdModel final : public QObject {
+class FlappyBirdModel final : public QObject, public IStatefulModule, public IPausableModule {
     Q_OBJECT
 
 public:
@@ -25,6 +27,7 @@ public:
     int bestScore() const { return bestScore_; }
     bool hasStarted() const { return started_; }
     bool isGameOver() const { return gameOver_; }
+    bool isPaused() const { return isPaused_; }
 
     // Constants (exposed for UI rendering if needed)
     static constexpr qreal kBirdX = 120.0;
@@ -38,6 +41,16 @@ public:
     void update(double viewWidth, double viewHeight);
     void reset();
 
+    // IStatefulModule
+    QJsonObject saveSession() const override;
+    void restoreSession(const QJsonObject& data) override;
+    QJsonObject saveHistory() const override;
+    void restoreHistory(const QJsonObject& data) override;
+
+    // IPausableModule
+    void pause() override { isPaused_ = true; }
+    void resume() override { isPaused_ = false; }
+
 signals:
     void updated();
     void gameOver();
@@ -46,7 +59,6 @@ signals:
 
 private:
     void spawnPipe(double viewWidth, double viewHeight);
-    void loadBestScore();
     void updateBestScoreIfNeeded();
     QRectF birdRect() const;
     bool hitsPipe(const QRectF& bird, const FlappyPipe& pipe, double viewHeight) const;
@@ -59,6 +71,7 @@ private:
     int bestScore_{ 0 };
     bool started_{ false };
     bool gameOver_{ false };
+    bool isPaused_{ false };
 
     // Move constants to cpp or keep as static constexpr
     static constexpr qreal kGravity = 0.42;

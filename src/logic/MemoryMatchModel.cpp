@@ -1,6 +1,7 @@
 #include "MemoryMatchModel.h"
 
 #include <QRandomGenerator>
+#include <QJsonArray>
 #include <QStringList>
 #include <algorithm>
 #include <random>
@@ -38,6 +39,7 @@ void MemoryMatchModel::reset() {
 }
 
 bool MemoryMatchModel::attemptFlip(int index) {
+    if (isPaused_) return false;
     if (index < 0 || index >= cards_.size()) return false;
     if (cards_[index].isMatched || cards_[index].isFlipped) return false;
 
@@ -68,4 +70,46 @@ void MemoryMatchModel::resetFlippedCards(int idx1, int idx2) {
     if (idx1 >= 0 && idx1 < cards_.size()) cards_[idx1].isFlipped = false;
     if (idx2 >= 0 && idx2 < cards_.size()) cards_[idx2].isFlipped = false;
     emit updated();
+}
+
+QJsonObject MemoryMatchModel::saveSession() const {
+    QJsonObject obj;
+    obj["matchesFound"] = matchesFound_;
+    
+    QJsonArray cardsArr;
+    for (const auto& card : cards_) {
+        QJsonObject cardObj;
+        cardObj["emoji"] = card.emoji;
+        cardObj["isFlipped"] = card.isFlipped;
+        cardObj["isMatched"] = card.isMatched;
+        cardsArr.append(cardObj);
+    }
+    obj["cards"] = cardsArr;
+    return obj;
+}
+
+void MemoryMatchModel::restoreSession(const QJsonObject& data) {
+    if (data.contains("matchesFound")) {
+        matchesFound_ = data["matchesFound"].toInt();
+    }
+    if (data.contains("cards")) {
+        QJsonArray cardsArr = data["cards"].toArray();
+        cards_.clear();
+        for (int i = 0; i < cardsArr.size(); ++i) {
+            QJsonObject cardObj = cardsArr[i].toObject();
+            cards_.append({ 
+                cardObj["emoji"].toString(), 
+                cardObj["isFlipped"].toBool(), 
+                cardObj["isMatched"].toBool() 
+            });
+        }
+    }
+    emit updated();
+}
+
+QJsonObject MemoryMatchModel::saveHistory() const {
+    return QJsonObject();
+}
+
+void MemoryMatchModel::restoreHistory(const QJsonObject& data) {
 }

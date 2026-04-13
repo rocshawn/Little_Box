@@ -2,6 +2,8 @@
 
 #include "../../core/ThemeManager.h"
 #include "../../logic/MemoryMatchModel.h"
+#include "../../services/StorageService.h"
+#include "../widgets/SessionOverlayWidget.h"
 
 #include <QMouseEvent>
 #include <QPainter>
@@ -22,7 +24,16 @@ MemoryMatchWindow::MemoryMatchWindow(QWidget* parent)
     connect(model_, &MemoryMatchModel::matchResult, this, &MemoryMatchWindow::onMatchResult);
     connect(model_, &MemoryMatchModel::gameOver, this, &MemoryMatchWindow::onGameOver);
 
-    updateUi();
+    if (StorageService::instance().hasSession("memory_match")) {
+        model_->restoreSession(StorageService::instance().loadSession("memory_match"));
+        // clear transient flips cleanly
+        firstFlippedIdx_ = -1;
+        secondFlippedIdx_ = -1;
+        isProcessing_ = false;
+        showOverlay();
+    } else {
+        updateUi();
+    }
 }
 
 void MemoryMatchWindow::setupUi() {
@@ -62,6 +73,7 @@ void MemoryMatchWindow::setupUi() {
 }
 
 void MemoryMatchWindow::resetGame() {
+    StorageService::instance().clearSession("memory_match");
     model_->reset();
     firstFlippedIdx_ = -1;
     secondFlippedIdx_ = -1;
@@ -87,6 +99,7 @@ void MemoryMatchWindow::onMatchResult(bool success, int idx1, int idx2) {
 }
 
 void MemoryMatchWindow::onGameOver() {
+    StorageService::instance().clearSession("memory_match");
     if (auto status = centralWidget()->findChild<QLabel*>("statusLabel")) {
         status->setText("全部匹配！真厉害 🎉");
     }
@@ -94,6 +107,34 @@ void MemoryMatchWindow::onGameOver() {
 
 void MemoryMatchWindow::updateUi() {
     update();
+}
+
+void MemoryMatchWindow::showOverlay() {
+    model_->pause();
+    if (!overlay_) {
+        overlay_ = new SessionOverlayWidget(this);
+        connect(overlay_, &SessionOverlayWidget::continueRequested, this, &MemoryMatchWindow::hideOverlay);
+        connect(overlay_, &SessionOverlayWidget::restartRequested, this, [this]() {
+            hideOverlay();
+            resetGame();
+        });
+    }
+    overlay_->show();
+    overlay_->raise();
+}
+
+void MemoryMatchWindow::hideOverlay() {
+    model_->resume();
+    if (overlay_) {
+        overlay_->hide();
+    }
+}
+
+void MemoryMatchWindow::closeEvent(QCloseEvent* event) {
+    if (!model_->isGameOver()) {
+        StorageService::instance().saveSession("memory_match", model_->saveSession());
+    }
+    QMainWindow::closeEvent(event);
 }
 
 void MemoryMatchWindow::paintEvent(QPaintEvent* event) {
@@ -130,6 +171,7 @@ void MemoryMatchWindow::paintEvent(QPaintEvent* event) {
 }
 
 void MemoryMatchWindow::mousePressEvent(QMouseEvent* event) {
+    if (overlay_ && !overlay_->isHidden()) return;
     if (isProcessing_) return;
 
     int offsetX = 50, offsetY = 140;

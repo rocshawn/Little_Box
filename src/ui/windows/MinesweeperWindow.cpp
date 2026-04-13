@@ -2,6 +2,8 @@
 
 #include "../../core/ThemeManager.h"
 #include "../../logic/MinesweeperModel.h"
+#include "../../services/StorageService.h"
+#include "../widgets/SessionOverlayWidget.h"
 
 #include <QMouseEvent>
 #include <QPainter>
@@ -18,7 +20,12 @@ MinesweeperWindow::MinesweeperWindow(QWidget* parent)
     connect(model_, &MinesweeperModel::flagsChanged, this, &MinesweeperWindow::onFlagsChanged);
     connect(model_, &MinesweeperModel::gameOver, this, &MinesweeperWindow::onGameOver);
 
-    updateUi();
+    if (StorageService::instance().hasSession("minesweeper")) {
+        model_->restoreSession(StorageService::instance().loadSession("minesweeper"));
+        showOverlay();
+    } else {
+        updateUi();
+    }
 }
 
 void MinesweeperWindow::setupUi() {
@@ -58,6 +65,7 @@ void MinesweeperWindow::setupUi() {
 }
 
 void MinesweeperWindow::resetGame() {
+    StorageService::instance().clearSession("minesweeper");
     model_->reset();
 }
 
@@ -68,11 +76,40 @@ void MinesweeperWindow::onFlagsChanged(int count) {
 }
 
 void MinesweeperWindow::onGameOver(bool win) {
+    StorageService::instance().clearSession("minesweeper");
     update();
 }
 
 void MinesweeperWindow::updateUi() {
     update();
+}
+
+void MinesweeperWindow::showOverlay() {
+    model_->pause();
+    if (!overlay_) {
+        overlay_ = new SessionOverlayWidget(this);
+        connect(overlay_, &SessionOverlayWidget::continueRequested, this, &MinesweeperWindow::hideOverlay);
+        connect(overlay_, &SessionOverlayWidget::restartRequested, this, [this]() {
+            hideOverlay();
+            resetGame();
+        });
+    }
+    overlay_->show();
+    overlay_->raise();
+}
+
+void MinesweeperWindow::hideOverlay() {
+    model_->resume();
+    if (overlay_) {
+        overlay_->hide();
+    }
+}
+
+void MinesweeperWindow::closeEvent(QCloseEvent* event) {
+    if (!model_->isGameOver()) {
+        StorageService::instance().saveSession("minesweeper", model_->saveSession());
+    }
+    QMainWindow::closeEvent(event);
 }
 
 void MinesweeperWindow::paintEvent(QPaintEvent* event) {
@@ -126,8 +163,12 @@ void MinesweeperWindow::paintEvent(QPaintEvent* event) {
 }
 
 void MinesweeperWindow::mousePressEvent(QMouseEvent* event) {
+    if (overlay_ && !overlay_->isHidden()) {
+        return;
+    }
+
     if (model_->isGameOver()) { 
-        model_->reset();
+        resetGame();
         return;
     }
 

@@ -2,10 +2,12 @@
 
 #include <QObject>
 #include <QStringList>
+#include <QJsonObject>
+#include "../core/ModuleInterfaces.h"
 
 class QTimer;
 
-class TypingTestModel final : public QObject {
+class TypingTestModel final : public QObject, public IStatefulModule {
     Q_OBJECT
 
 public:
@@ -27,6 +29,12 @@ public:
     void setDifficulty(Difficulty diff);
     void reset();
     void updateInput(const QString& typed);
+
+    // IStatefulModule
+    QJsonObject saveSession() const override { return QJsonObject(); }
+    void restoreSession(const QJsonObject& data) override {}
+    QJsonObject saveHistory() const override;
+    void restoreHistory(const QJsonObject& data) override;
 
 signals:
     void updated();

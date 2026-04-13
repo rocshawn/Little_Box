@@ -3,6 +3,7 @@
 #include <QRandomGenerator>
 #include <QSettings>
 #include <QTimer>
+#include <QJsonObject>
 
 #include <algorithm>
 
@@ -66,6 +67,13 @@ void TypingTestModel::updateInput(const QString& typed) {
     if (typed.length() >= targetText_.length()) {
         timer_->stop();
         isRunning_ = false;
+        
+        if (accuracy_ >= 90 && wpm_ > bestWpm_) {
+            bestWpm_ = wpm_;
+            QSettings settings;
+            settings.setValue("typing_test/best_wpm", bestWpm_);
+        }
+        
         emit finished();
     }
 }
@@ -108,12 +116,19 @@ void TypingTestModel::calculateStats(const QString& typed) {
     // Words per minute standard formula: (chars / 5) / (seconds / 60)
     double minutes = std::max(1.0, static_cast<double>(elapsedSeconds_)) / 60.0;
     wpm_ = (static_cast<double>(typed.length()) / 5.0) / minutes;
-
-    if (wpm_ > bestWpm_) {
-        bestWpm_ = wpm_;
-        QSettings settings;
-        settings.setValue("typing_test/best_wpm", bestWpm_);
-    }
+    wpm_ = std::max(0.0, wpm_);
 
     emit statsChanged(wpm_, accuracy_);
+}
+
+QJsonObject TypingTestModel::saveHistory() const {
+    QJsonObject obj;
+    obj["bestWpm"] = bestWpm_;
+    return obj;
+}
+
+void TypingTestModel::restoreHistory(const QJsonObject& data) {
+    if (data.contains("bestWpm")) {
+        bestWpm_ = data["bestWpm"].toDouble();
+    }
 }

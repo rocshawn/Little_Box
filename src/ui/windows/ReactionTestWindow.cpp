@@ -1,6 +1,9 @@
 #include "ReactionTestWindow.h"
 
 #include "../widgets/ReactionTestWidget.h"
+#include "../../core/ThemeManager.h"
+#include "../../logic/ReactionTestModel.h"
+#include "../../services/StorageService.h"
 
 #include <QColor>
 #include <QFrame>
@@ -19,7 +22,8 @@ constexpr int kInitialWindowHeight = 720;
 } // namespace
 
 ReactionTestWindow::ReactionTestWindow(QWidget* parent)
-    : QMainWindow(parent) {
+    : QMainWindow(parent),
+      model_(new ReactionTestModel(this)) {
     setupUi();
 }
 
@@ -37,7 +41,7 @@ void ReactionTestWindow::setupUi() {
 
     titleLabel_ = new QLabel("反应速度测试", card);
     subtitleLabel_ = new QLabel("共 5 轮，每轮在屏幕变绿后点击，结果以毫秒（ms）显示并绘制折线图。", card);
-    reactionTestWidget_ = new ReactionTestWidget(card);
+    reactionTestWidget_ = new ReactionTestWidget(model_, card);
     closeButton_ = new QPushButton("关闭", card);
 
     centralWidget->setObjectName("centralWidget");
@@ -85,6 +89,33 @@ void ReactionTestWindow::setupUi() {
     );
 
     connect(closeButton_, &QPushButton::clicked, this, &QWidget::close);
+    connect(model_, &ReactionTestModel::sessionFinished, this, &ReactionTestWindow::onSessionFinished);
+
+    if (StorageService::instance().hasHistory("reaction_test")) {
+        model_->restoreHistory(StorageService::instance().loadHistory("reaction_test"));
+    }
+
+
+    updateUi();
 
     setCentralWidget(centralWidget);
+}
+
+void ReactionTestWindow::updateUi() {
+    // Basic UI update if needed, though ReactionTestWidget handles most of it
+    if (reactionTestWidget_) {
+        reactionTestWidget_->update();
+    }
+}
+
+void ReactionTestWindow::onSessionFinished(int avg) {
+    // Could show a congratulatory message or handle high scores here
+    updateUi();
+}
+
+void ReactionTestWindow::closeEvent(QCloseEvent* event) {
+    if (model_) {
+        StorageService::instance().saveHistory("reaction_test", model_->saveHistory());
+    }
+    QMainWindow::closeEvent(event);
 }

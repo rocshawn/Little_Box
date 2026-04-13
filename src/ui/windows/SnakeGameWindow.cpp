@@ -2,6 +2,8 @@
 
 #include "../../core/ThemeManager.h"
 #include "../../logic/SnakeGameModel.h"
+#include "../../services/StorageService.h"
+#include "../widgets/SessionOverlayWidget.h"
 
 #include <QKeyEvent>
 #include <QPainter>
@@ -23,7 +25,13 @@ SnakeGameWindow::SnakeGameWindow(QWidget* parent)
     timer_->setInterval(150);
     connect(timer_, &QTimer::timeout, model_, &SnakeGameModel::update);
     
-    startNewGame();
+    if (StorageService::instance().hasSession("snake_game")) {
+        model_->restoreSession(StorageService::instance().loadSession("snake_game"));
+        showOverlay();
+        update(); // Ensure rendering covers initial state
+    } else {
+        startNewGame();
+    }
 }
 
 void SnakeGameWindow::setupUi() {
@@ -54,6 +62,7 @@ void SnakeGameWindow::setupUi() {
 }
 
 void SnakeGameWindow::startNewGame() {
+    StorageService::instance().clearSession("snake_game");
     model_->reset();
     timer_->start();
     update();
@@ -75,7 +84,37 @@ void SnakeGameWindow::onScoreChanged(int score) {
 }
 
 void SnakeGameWindow::onGameOver() {
+    StorageService::instance().clearSession("snake_game");
     timer_->stop();
+}
+
+void SnakeGameWindow::showOverlay() {
+    if (!overlay_) {
+        overlay_ = new SessionOverlayWidget(this);
+        connect(overlay_, &SessionOverlayWidget::continueRequested, this, &SnakeGameWindow::hideOverlay);
+        connect(overlay_, &SessionOverlayWidget::restartRequested, this, [this]() {
+            hideOverlay();
+            startNewGame();
+        });
+    }
+    overlay_->show();
+    overlay_->raise();
+}
+
+void SnakeGameWindow::hideOverlay() {
+    if (overlay_) {
+        overlay_->hide();
+    }
+    if (!model_->isGameOver()) {
+        timer_->start(); // Resume timer
+    }
+}
+
+void SnakeGameWindow::closeEvent(QCloseEvent* event) {
+    if (!model_->isGameOver()) {
+        StorageService::instance().saveSession("snake_game", model_->saveSession());
+    }
+    QMainWindow::closeEvent(event);
 }
 
 void SnakeGameWindow::paintEvent(QPaintEvent* event) {
@@ -130,6 +169,10 @@ void SnakeGameWindow::paintEvent(QPaintEvent* event) {
 }
 
 void SnakeGameWindow::keyPressEvent(QKeyEvent* event) {
+    if (overlay_ && !overlay_->isHidden()) {
+        return; // Block key events if overlay is visible
+    }
+
     switch (event->key()) {
         case Qt::Key_Up:
         case Qt::Key_W: model_->setDirection(SnakeGameModel::Direction::Up); break;

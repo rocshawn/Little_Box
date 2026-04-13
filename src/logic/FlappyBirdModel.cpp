@@ -1,16 +1,11 @@
 #include "FlappyBirdModel.h"
 
 #include <QRandomGenerator>
-#include <QSettings>
+#include <QJsonArray>
 #include <algorithm>
-
-namespace {
-constexpr auto kBestScoreSettingsKey = "games/flappyBird/bestScore";
-}
 
 FlappyBirdModel::FlappyBirdModel(QObject* parent)
     : QObject(parent) {
-    loadBestScore();
     reset();
 }
 
@@ -33,6 +28,7 @@ void FlappyBirdModel::startNewGame(double viewHeight) {
 }
 
 void FlappyBirdModel::flap() {
+    if (isPaused_) return;
     if (gameOver_) {
         reset(); // Potentially restart here or let UI call reset/start
         return;
@@ -48,6 +44,8 @@ void FlappyBirdModel::flap() {
 }
 
 void FlappyBirdModel::update(double viewWidth, double viewHeight) {
+    if (isPaused_) return;
+    
     if (!started_ || gameOver_) {
         emit updated();
         return;
@@ -117,19 +115,10 @@ void FlappyBirdModel::spawnPipe(double viewWidth, double viewHeight) {
     pipes_.append(pipe);
 }
 
-void FlappyBirdModel::loadBestScore() {
-    QSettings settings;
-    const QString settingsKey = QString::fromLatin1(kBestScoreSettingsKey);
-    bestScore_ = std::max(0, settings.value(settingsKey, 0).toInt());
-}
-
 void FlappyBirdModel::updateBestScoreIfNeeded() {
     if (score_ <= bestScore_) return;
 
     bestScore_ = score_;
-    QSettings settings;
-    const QString settingsKey = QString::fromLatin1(kBestScoreSettingsKey);
-    settings.setValue(settingsKey, bestScore_);
 }
 
 QRectF FlappyBirdModel::birdRect() const {
@@ -145,4 +134,62 @@ bool FlappyBirdModel::hitsPipe(const QRectF& bird, const FlappyPipe& pipe, doubl
     const QRectF topPipe(pipe.x, 0, kPipeWidth, gapTop);
     const QRectF bottomPipe(pipe.x, gapBottom, kPipeWidth, playHeight - gapBottom);
     return bird.intersects(topPipe) || bird.intersects(bottomPipe);
+}
+
+QJsonObject FlappyBirdModel::saveSession() const {
+    QJsonObject obj;
+    obj["birdY"] = birdY_;
+    obj["birdVelocity"] = birdVelocity_;
+    obj["frameCounter"] = frameCounter_;
+    obj["score"] = score_;
+    obj["started"] = started_;
+    obj["gameOver"] = gameOver_;
+    
+    QJsonArray pipesArr;
+    for (const auto& pipe : pipes_) {
+        QJsonObject pipeObj;
+        pipeObj["x"] = pipe.x;
+        pipeObj["gapCenterY"] = pipe.gapCenterY;
+        pipeObj["scored"] = pipe.scored;
+        pipesArr.append(pipeObj);
+    }
+    obj["pipes"] = pipesArr;
+    return obj;
+}
+
+void FlappyBirdModel::restoreSession(const QJsonObject& data) {
+    if (data.contains("birdY")) birdY_ = data["birdY"].toDouble();
+    if (data.contains("birdVelocity")) birdVelocity_ = data["birdVelocity"].toDouble();
+    if (data.contains("frameCounter")) frameCounter_ = data["frameCounter"].toInt();
+    if (data.contains("score")) score_ = data["score"].toInt();
+    if (data.contains("started")) started_ = data["started"].toBool();
+    if (data.contains("gameOver")) gameOver_ = data["gameOver"].toBool();
+    
+    if (data.contains("pipes")) {
+        QJsonArray pipesArr = data["pipes"].toArray();
+        pipes_.clear();
+        for (int i = 0; i < pipesArr.size(); ++i) {
+            QJsonObject pipeObj = pipesArr[i].toObject();
+            FlappyPipe p;
+            p.x = pipeObj["x"].toDouble();
+            p.gapCenterY = pipeObj["gapCenterY"].toDouble();
+            p.scored = pipeObj["scored"].toBool();
+            pipes_.append(p);
+        }
+    }
+    emit stateChanged();
+    emit updated();
+    emit scoreChanged(score_, bestScore_);
+}
+
+QJsonObject FlappyBirdModel::saveHistory() const {
+    QJsonObject obj;
+    obj["bestScore"] = bestScore_;
+    return obj;
+}
+
+void FlappyBirdModel::restoreHistory(const QJsonObject& data) {
+    if (data.contains("bestScore")) {
+        bestScore_ = data["bestScore"].toInt();
+    }
 }

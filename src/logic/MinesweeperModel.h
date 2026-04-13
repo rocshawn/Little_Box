@@ -2,6 +2,8 @@
 
 #include <QObject>
 #include <QVector>
+#include <QJsonObject>
+#include "../core/ModuleInterfaces.h"
 
 struct MineCell {
     MineCell() = default;
@@ -11,7 +13,7 @@ struct MineCell {
     int adjacentMines{ 0 };
 };
 
-class MinesweeperModel final : public QObject {
+class MinesweeperModel final : public QObject, public IStatefulModule, public IPausableModule {
     Q_OBJECT
 
 public:
@@ -32,6 +34,16 @@ public:
     void revealCell(int r, int c);
     void toggleFlag(int r, int c);
 
+    // IStatefulModule
+    QJsonObject saveSession() const override;
+    void restoreSession(const QJsonObject& data) override;
+    QJsonObject saveHistory() const override;
+    void restoreHistory(const QJsonObject& data) override;
+
+    // IPausableModule
+    void pause() override { isPaused_ = true; }
+    void resume() override { isPaused_ = false; }
+
 signals:
     void updated();
     void gameOver(bool win);
@@ -51,5 +63,6 @@ private:
     bool isGameOver_{ false };
     bool isWin_{ false };
     bool isFirstClick_{ true };
+    bool isPaused_{ false };
     int flagsUsed_{ 0 };
 };

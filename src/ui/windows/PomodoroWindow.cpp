@@ -2,6 +2,7 @@
 
 #include "../../core/ThemeManager.h"
 #include "../../logic/PomodoroModel.h"
+#include "../../services/StorageService.h"
 
 #include <QApplication>
 #include <QCloseEvent>
@@ -30,6 +31,9 @@ PomodoroWindow::PomodoroWindow(QWidget* parent)
     connect(model_, &PomodoroModel::stateChanged, this, &PomodoroWindow::updateUi);
     connect(model_, &PomodoroModel::finished, this, &PomodoroWindow::onTimerFinished);
 
+    if (StorageService::instance().hasSession("pomodoro")) {
+        model_->restoreSession(StorageService::instance().loadSession("pomodoro"));
+    }
     updateUi();
 }
 
@@ -144,7 +148,10 @@ void PomodoroWindow::setupNormalUi() {
     connect(workModeBtn_, &QPushButton::clicked, this, [this]{ switchMode(true); });
     connect(breakModeBtn_, &QPushButton::clicked, this, [this]{ switchMode(false); });
     connect(normalPlayPauseBtn_, &QPushButton::clicked, this, [this]{ model_->toggle(); });
-    connect(resetBtn, &QPushButton::clicked, this, [this]{ model_->reset(); });
+    connect(resetBtn, &QPushButton::clicked, this, [this]{ 
+        StorageService::instance().clearSession("pomodoro");
+        model_->reset(); 
+    });
     connect(miniBtn, &QPushButton::clicked, this, &PomodoroWindow::enterMiniMode);
 }
 
@@ -190,6 +197,7 @@ void PomodoroWindow::setupMiniUi() {
 }
 
 void PomodoroWindow::onTimerFinished() {
+    StorageService::instance().clearSession("pomodoro");
     QMessageBox::information(this, 
                              model_->isWorkMode() ? "专注结束" : "休息结束", 
                              model_->isWorkMode() ? "太棒了！休息一下吧。" : "休息结束，可以开始下一个番茄钟了。");
@@ -241,6 +249,9 @@ void PomodoroWindow::exitMiniMode() {
 
 void PomodoroWindow::closeEvent(QCloseEvent* event) {
     if (parentWidget() && parentWidget()->isHidden()) parentWidget()->showNormal();
+    
+    StorageService::instance().saveSession("pomodoro", model_->saveSession());
+    
     QMainWindow::closeEvent(event);
 }
 

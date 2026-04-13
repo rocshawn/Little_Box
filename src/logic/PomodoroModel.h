@@ -2,10 +2,12 @@
 
 #include <QObject>
 #include <QString>
+#include <QJsonObject>
+#include "../core/ModuleInterfaces.h"
 
 class QTimer;
 
-class PomodoroModel final : public QObject {
+class PomodoroModel final : public QObject, public IStatefulModule {
     Q_OBJECT
 
 public:
@@ -25,6 +27,12 @@ public:
     void setMode(bool isWork);
     void start();
     void stop();
+
+    // IStatefulModule
+    QJsonObject saveSession() const override;
+    void restoreSession(const QJsonObject& data) override;
+    QJsonObject saveHistory() const override;
+    void restoreHistory(const QJsonObject& data) override;
 
 signals:
     void timeUpdated(int seconds);

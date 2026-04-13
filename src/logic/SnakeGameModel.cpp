@@ -1,6 +1,7 @@
 #include "SnakeGameModel.h"
 
 #include <QRandomGenerator>
+#include <QJsonArray>
 
 SnakeGameModel::SnakeGameModel(int gridSize, QObject* parent)
     : QObject(parent), gridSize_(gridSize) {
@@ -106,4 +107,57 @@ bool SnakeGameModel::checkCollision(const QPoint& head) const {
     }
 
     return false;
+}
+
+QJsonObject SnakeGameModel::saveSession() const {
+    QJsonObject obj;
+    obj["score"] = score_;
+    obj["isGameOver"] = isGameOver_;
+    obj["currentDir"] = static_cast<int>(currentDir_);
+    obj["nextDir"] = static_cast<int>(nextDir_);
+    QJsonObject foodObj;
+    foodObj["x"] = food_.x();
+    foodObj["y"] = food_.y();
+    obj["food"] = foodObj;
+    
+    QJsonArray snakeArr;
+    for (const auto& pt : snake_) {
+        QJsonObject ptObj;
+        ptObj["x"] = pt.x();
+        ptObj["y"] = pt.y();
+        snakeArr.append(ptObj);
+    }
+    obj["snake"] = snakeArr;
+    return obj;
+}
+
+void SnakeGameModel::restoreSession(const QJsonObject& data) {
+    if (data.contains("score")) score_ = data["score"].toInt();
+    if (data.contains("isGameOver")) isGameOver_ = data["isGameOver"].toBool();
+    if (data.contains("currentDir")) currentDir_ = static_cast<Direction>(data["currentDir"].toInt());
+    if (data.contains("nextDir")) nextDir_ = static_cast<Direction>(data["nextDir"].toInt());
+    
+    if (data.contains("food")) {
+        QJsonObject foodObj = data["food"].toObject();
+        food_.setX(foodObj["x"].toInt());
+        food_.setY(foodObj["y"].toInt());
+    }
+    
+    if (data.contains("snake")) {
+        QJsonArray snakeArr = data["snake"].toArray();
+        snake_.clear();
+        for (int i = 0; i < snakeArr.size(); ++i) {
+            QJsonObject ptObj = snakeArr[i].toObject();
+            snake_.append(QPoint(ptObj["x"].toInt(), ptObj["y"].toInt()));
+        }
+    }
+    emit updated();
+    emit scoreChanged(score_);
+}
+
+QJsonObject SnakeGameModel::saveHistory() const {
+    return QJsonObject(); 
+}
+
+void SnakeGameModel::restoreHistory(const QJsonObject& data) {
 }

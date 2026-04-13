@@ -3,10 +3,12 @@
 #include <QElapsedTimer>
 #include <QObject>
 #include <QVector>
+#include <QJsonObject>
+#include "../core/ModuleInterfaces.h"
 
 class QTimer;
 
-class ReactionTestModel final : public QObject {
+class ReactionTestModel final : public QObject, public IStatefulModule {
     Q_OBJECT
 
 public:
@@ -32,6 +34,12 @@ public:
     // Actions
     void handleInteraction();
     void resetSession();
+
+    // IStatefulModule
+    QJsonObject saveSession() const override { return QJsonObject(); }
+    void restoreSession(const QJsonObject& data) override {}
+    QJsonObject saveHistory() const override;
+    void restoreHistory(const QJsonObject& data) override;
 
 signals:
     void updated();

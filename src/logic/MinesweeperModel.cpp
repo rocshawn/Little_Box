@@ -1,6 +1,6 @@
 #include "MinesweeperModel.h"
-
 #include <QRandomGenerator>
+#include <QJsonArray>
 #include <cmath>
 
 MinesweeperModel::MinesweeperModel(QObject* parent)
@@ -20,7 +20,7 @@ void MinesweeperModel::reset() {
 }
 
 void MinesweeperModel::revealCell(int r, int c) {
-    if (isGameOver_) return;
+    if (isGameOver_ || isPaused_) return;
     if (r < 0 || r >= kRows || c < 0 || c >= kCols) return;
     if (board_[r][c].isRevealed || board_[r][c].isFlagged) return;
 
@@ -48,7 +48,7 @@ void MinesweeperModel::revealCell(int r, int c) {
 }
 
 void MinesweeperModel::toggleFlag(int r, int c) {
-    if (isGameOver_ || isFirstClick_) return;
+    if (isGameOver_ || isFirstClick_ || isPaused_) return;
     if (r < 0 || r >= kRows || c < 0 || c >= kCols) return;
     if (board_[r][c].isRevealed) return;
 
@@ -116,4 +116,59 @@ void MinesweeperModel::checkWin() {
         emit updated();
         emit gameOver(true);
     }
+}
+
+QJsonObject MinesweeperModel::saveSession() const {
+    QJsonObject obj;
+    obj["isGameOver"] = isGameOver_;
+    obj["isWin"] = isWin_;
+    obj["isFirstClick"] = isFirstClick_;
+    obj["flagsUsed"] = flagsUsed_;
+    
+    QJsonArray boardArr;
+    for (const auto& row : board_) {
+        QJsonArray rowArr;
+        for (const auto& cell : row) {
+            QJsonObject cellObj;
+            cellObj["isMine"] = cell.isMine;
+            cellObj["isRevealed"] = cell.isRevealed;
+            cellObj["isFlagged"] = cell.isFlagged;
+            cellObj["adjacentMines"] = cell.adjacentMines;
+            rowArr.append(cellObj);
+        }
+        boardArr.append(rowArr);
+    }
+    obj["board"] = boardArr;
+    return obj;
+}
+
+void MinesweeperModel::restoreSession(const QJsonObject& data) {
+    if (data.contains("isGameOver")) isGameOver_ = data["isGameOver"].toBool();
+    if (data.contains("isWin")) isWin_ = data["isWin"].toBool();
+    if (data.contains("isFirstClick")) isFirstClick_ = data["isFirstClick"].toBool();
+    if (data.contains("flagsUsed")) flagsUsed_ = data["flagsUsed"].toInt();
+    
+    if (data.contains("board")) {
+        QJsonArray boardArr = data["board"].toArray();
+        for (int r = 0; r < boardArr.size() && r < kRows; ++r) {
+            QJsonArray rowArr = boardArr[r].toArray();
+            for (int c = 0; c < rowArr.size() && c < kCols; ++c) {
+                QJsonObject cellObj = rowArr[c].toObject();
+                board_[r][c].isMine = cellObj["isMine"].toBool();
+                board_[r][c].isRevealed = cellObj["isRevealed"].toBool();
+                board_[r][c].isFlagged = cellObj["isFlagged"].toBool();
+                board_[r][c].adjacentMines = cellObj["adjacentMines"].toInt();
+            }
+        }
+    }
+    emit flagsChanged(flagsUsed_);
+    emit updated();
+}
+
+QJsonObject MinesweeperModel::saveHistory() const {
+    // Record fastest time for Minesweeper in the future? Nothing for now.
+    return QJsonObject();
+}
+
+void MinesweeperModel::restoreHistory(const QJsonObject& data) {
 }

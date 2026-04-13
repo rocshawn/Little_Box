@@ -1,6 +1,7 @@
 #include "Game2048Model.h"
 #include <QPoint>
 #include <QRandomGenerator>
+#include <QJsonArray>
 
 Game2048Model::Game2048Model(QObject* parent)
     : QObject(parent),
@@ -135,4 +136,45 @@ bool Game2048Model::isGameOver() const {
         }
     }
     return true;
+}
+
+QJsonObject Game2048Model::saveSession() const {
+    QJsonObject obj;
+    obj["score"] = score_;
+    obj["isGameWon"] = isGameWon_;
+    
+    QJsonArray boardArr;
+    for (int r = 0; r < 4; ++r) {
+        QJsonArray rowArr;
+        for (int c = 0; c < 4; ++c) {
+            rowArr.append(board_[r][c]);
+        }
+        boardArr.append(rowArr);
+    }
+    obj["board"] = boardArr;
+    return obj;
+}
+
+void Game2048Model::restoreSession(const QJsonObject& data) {
+    if (data.contains("score")) score_ = data["score"].toInt();
+    if (data.contains("isGameWon")) isGameWon_ = data["isGameWon"].toBool();
+    if (data.contains("board")) {
+        QJsonArray boardArr = data["board"].toArray();
+        for (int r = 0; r < 4 && r < boardArr.size(); ++r) {
+            QJsonArray rowArr = boardArr[r].toArray();
+            for (int c = 0; c < 4 && c < rowArr.size(); ++c) {
+                board_[r][c] = rowArr[c].toInt();
+            }
+        }
+    }
+    emit updated();
+    emit scoreChanged(score_);
+}
+
+QJsonObject Game2048Model::saveHistory() const {
+    return QJsonObject(); // no history specifically for 2048 for now
+}
+
+void Game2048Model::restoreHistory(const QJsonObject& data) {
+    // nothing to restore
 }

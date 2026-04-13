@@ -3,8 +3,10 @@
 #include <QObject>
 #include <QList>
 #include <QPoint>
+#include <QJsonObject>
+#include "../core/ModuleInterfaces.h"
 
-class SnakeGameModel final : public QObject {
+class SnakeGameModel final : public QObject, public IStatefulModule, public IPausableModule {
     Q_OBJECT
 
 public:
@@ -24,6 +26,15 @@ public:
     void setDirection(Direction dir);
     void update();
     void reset();
+    // IStatefulModule
+    QJsonObject saveSession() const override;
+    void restoreSession(const QJsonObject& data) override;
+    QJsonObject saveHistory() const override;
+    void restoreHistory(const QJsonObject& data) override;
+
+    // IPausableModule
+    void pause() override {}
+    void resume() override {}
 
 signals:
     void updated();

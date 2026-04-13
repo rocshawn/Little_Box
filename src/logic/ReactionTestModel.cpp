@@ -18,12 +18,6 @@ ReactionTestModel::ReactionTestModel(QObject* parent)
       isNewRecord_(false) {
     waitTimer_->setSingleShot(true);
     connect(waitTimer_, &QTimer::timeout, this, &ReactionTestModel::enterMeasuringState);
-
-    const QSettings settings;
-    const int savedBest = settings.value("reaction_test/best_average_ms", -1).toInt();
-    if (savedBest > 0) {
-        bestAverageMs_ = savedBest;
-    }
 }
 
 void ReactionTestModel::handleInteraction() {
@@ -98,9 +92,6 @@ void ReactionTestModel::finalizeSession() {
         if (averageMs_ > 0 && (bestAverageMs_ < 0 || averageMs_ < bestAverageMs_)) {
             bestAverageMs_ = averageMs_;
             isNewRecord_ = true;
-
-            QSettings settings;
-            settings.setValue("reaction_test/best_average_ms", bestAverageMs_);
         }
     }
     emit sessionFinished(averageMs_);
@@ -117,4 +108,19 @@ void ReactionTestModel::resetSession() {
     isNewRecord_ = false;
     emit stateChanged(state_);
     emit updated();
+}
+
+QJsonObject ReactionTestModel::saveHistory() const {
+    QJsonObject obj;
+    obj["bestAverageMs"] = bestAverageMs_;
+    return obj;
+}
+
+void ReactionTestModel::restoreHistory(const QJsonObject& data) {
+    if (data.contains("bestAverageMs")) {
+        const int savedBest = data["bestAverageMs"].toInt(-1);
+        if (savedBest > 0) {
+            bestAverageMs_ = savedBest;
+        }
+    }
 }

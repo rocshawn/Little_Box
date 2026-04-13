@@ -1,6 +1,7 @@
 #include "MazeGameModel.h"
-
+#include <QQueue>
 #include <QRandomGenerator>
+#include <QJsonArray>
 
 #include <algorithm>
 
@@ -21,6 +22,8 @@ void MazeGameModel::restartLevel() {
 }
 
 void MazeGameModel::tryMove(int dx, int dy) {
+    if (isPaused_) return;
+
     const QPoint target = playerCell_ + QPoint(dx, dy);
     if (!isOpenCell(target)) {
         return;
@@ -101,4 +104,70 @@ void MazeGameModel::generateLevel() {
 int MazeGameModel::boardSizeForLevel(int level) const {
     const int safeLevel = std::max(1, level);
     return 13 + safeLevel * 2;
+}
+
+QJsonObject MazeGameModel::saveSession() const {
+    QJsonObject obj;
+    obj["level"] = level_;
+    
+    QJsonObject pCell;
+    pCell["x"] = playerCell_.x();
+    pCell["y"] = playerCell_.y();
+    obj["playerCell"] = pCell;
+    
+    QJsonObject eCell;
+    eCell["x"] = exitCell_.x();
+    eCell["y"] = exitCell_.y();
+    obj["exitCell"] = eCell;
+    
+    QJsonArray wallsArr;
+    for (const auto& row : walls_) {
+        QJsonArray rowArr;
+        for (bool w : row) {
+            rowArr.append(w);
+        }
+        wallsArr.append(rowArr);
+    }
+    obj["walls"] = wallsArr;
+    return obj;
+}
+
+void MazeGameModel::restoreSession(const QJsonObject& data) {
+    if (data.contains("level")) level_ = data["level"].toInt();
+    if (data.contains("playerCell")) {
+        auto pObj = data["playerCell"].toObject();
+        playerCell_.setX(pObj["x"].toInt());
+        playerCell_.setY(pObj["y"].toInt());
+    }
+    if (data.contains("exitCell")) {
+        auto eObj = data["exitCell"].toObject();
+        exitCell_.setX(eObj["x"].toInt());
+        exitCell_.setY(eObj["y"].toInt());
+    }
+    if (data.contains("walls")) {
+        QJsonArray wallsArr = data["walls"].toArray();
+        int bSize = boardSizeForLevel(level_);
+        walls_ = QVector<QVector<bool>>(bSize, QVector<bool>(bSize, true));
+        for (int r = 0; r < wallsArr.size() && r < bSize; ++r) {
+            QJsonArray rowArr = wallsArr[r].toArray();
+            for (int c = 0; c < rowArr.size() && c < bSize; ++c) {
+                walls_[r][c] = rowArr[c].toBool();
+            }
+        }
+    }
+    emit levelChanged(level_);
+    emit updated();
+}
+
+QJsonObject MazeGameModel::saveHistory() const {
+    QJsonObject obj;
+    obj["level"] = level_;
+    return obj;
+}
+
+void MazeGameModel::restoreHistory(const QJsonObject& data) {
+    if (data.contains("level")) {
+        level_ = data["level"].toInt();
+        emit levelChanged(level_);
+    }
 }

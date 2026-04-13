@@ -7,6 +7,7 @@
 class FlappyBirdModel;
 class QLabel;
 class QPushButton;
+class SessionOverlayWidget;
 
 class FlappyBirdWidget final : public QWidget {
     Q_OBJECT
@@ -32,14 +33,20 @@ public:
     explicit FlappyBirdWindow(QWidget* parent = nullptr);
     ~FlappyBirdWindow() override = default;
 
+protected:
+    void closeEvent(QCloseEvent* event) override;
+
 private slots:
     void updateScorePanel();
     void startNewGame();
+    void showOverlay();
+    void hideOverlay();
 
 private:
     void setupUi();
 
     FlappyBirdModel*  model_{ nullptr };
+    SessionOverlayWidget* overlay_{ nullptr };
     FlappyBirdWidget* gameWidget_{ nullptr };
     QLabel*           scoreValueLabel_{ nullptr };
     QLabel*           bestScoreValueLabel_{ nullptr };

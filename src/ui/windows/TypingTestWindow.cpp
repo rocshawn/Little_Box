@@ -2,6 +2,7 @@
 
 #include "../../core/ThemeManager.h"
 #include "../../logic/TypingTestModel.h"
+#include "../../services/StorageService.h"
 
 #include <QFrame>
 #include <QHBoxLayout>
@@ -22,6 +23,10 @@ TypingTestWindow::TypingTestWindow(QWidget* parent)
 
     connect(model_, &TypingTestModel::updated, this, &TypingTestWindow::updateUi);
     connect(model_, &TypingTestModel::finished, this, &TypingTestWindow::onFinished);
+    
+    if (StorageService::instance().hasHistory("typing_test")) {
+        model_->restoreHistory(StorageService::instance().loadHistory("typing_test"));
+    }
     
     updateUi();
 }
@@ -182,4 +187,9 @@ void TypingTestWindow::checkTyping() {
     const int currentScroll = textDisplay_->verticalScrollBar()->value();
     const int targetScroll = currentScroll + (cursorRect.top() - viewportHeight / 2);
     textDisplay_->verticalScrollBar()->setValue(targetScroll);
+}
+
+void TypingTestWindow::closeEvent(QCloseEvent* event) {
+    StorageService::instance().saveHistory("typing_test", model_->saveHistory());
+    QMainWindow::closeEvent(event);
 }

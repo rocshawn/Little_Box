@@ -2,6 +2,8 @@
 
 #include "../../core/ThemeManager.h"
 #include "../../logic/Game2048Model.h"
+#include "../../services/StorageService.h"
+#include "../widgets/SessionOverlayWidget.h"
 
 #include <QFrame>
 #include <QGridLayout>
@@ -23,6 +25,12 @@ Game2048Window::Game2048Window(QWidget* parent)
     connect(model_, &Game2048Model::gameWon, this, &Game2048Window::onGameWon);
 
     updateUi();
+
+    if (StorageService::instance().hasSession("game_2048")) {
+        model_->restoreSession(StorageService::instance().loadSession("game_2048"));
+        updateUi();
+        showOverlay();
+    }
 }
 
 void Game2048Window::setupUi() {
@@ -106,16 +114,45 @@ void Game2048Window::setupUi() {
 }
 
 void Game2048Window::resetGame() {
+    StorageService::instance().clearSession("game_2048");
     model_->reset();
     statusLabel_->setText("开始吧！加油！");
 }
 
 void Game2048Window::onGameOver() {
+    StorageService::instance().clearSession("game_2048");
     statusLabel_->setText("啊哦，游戏结束了！");
 }
 
 void Game2048Window::onGameWon() {
+    StorageService::instance().clearSession("game_2048");
     statusLabel_->setText("恭喜！你拿到了 2048！");
+}
+
+void Game2048Window::showOverlay() {
+    if (!overlay_) {
+        overlay_ = new SessionOverlayWidget(this);
+        connect(overlay_, &SessionOverlayWidget::continueRequested, this, &Game2048Window::hideOverlay);
+        connect(overlay_, &SessionOverlayWidget::restartRequested, this, [this]() {
+            hideOverlay();
+            resetGame();
+        });
+    }
+    overlay_->show();
+    overlay_->raise();
+}
+
+void Game2048Window::hideOverlay() {
+    if (overlay_) {
+        overlay_->hide();
+    }
+}
+
+void Game2048Window::closeEvent(QCloseEvent* event) {
+    if (!model_->isGameOver() && !model_->isGameWon()) {
+        StorageService::instance().saveSession("game_2048", model_->saveSession());
+    }
+    QMainWindow::closeEvent(event);
 }
 
 void Game2048Window::updateUi() {
@@ -155,6 +192,10 @@ QString Game2048Window::colorForNumber(int num, bool darkTheme) const {
 }
 
 void Game2048Window::keyPressEvent(QKeyEvent* event) {
+    if (overlay_ && !overlay_->isHidden()) {
+        return; // Block key events if overlay is visible
+    }
+
     if (model_->isGameOver()) {
         QMainWindow::keyPressEvent(event);
         return;

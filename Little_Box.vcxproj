@@ -111,6 +111,8 @@
     <ClCompile Include="src\ui\windows\MainWindow.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\services\SystemCommandService.cpp" />
+    <ClCompile Include="src\services\StorageService.cpp" />
+    <ClCompile Include="src\ui\widgets\SessionOverlayWidget.cpp" />
     <ClCompile Include="src\logic\SnakeGameModel.cpp" />
     <ClCompile Include="src\logic\FlappyBirdModel.cpp" />
     <ClCompile Include="src\logic\Game2048Model.cpp" />
@@ -120,6 +122,8 @@
     <ClCompile Include="src\logic\PomodoroModel.cpp" />
     <ClCompile Include="src\logic\ReactionTestModel.cpp" />
     <ClCompile Include="src\logic\TypingTestModel.cpp" />
+    <ClCompile Include="src\logic\WatermarkModel.cpp" />
+    <ClCompile Include="src\ui\windows\WatermarkWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="src\core\ThemeManager.h" />
@@ -127,6 +131,7 @@
     <QtMoc Include="src\ui\dialogs\ShutdownDialog.h" />
     <QtMoc Include="src\ui\widgets\Sidebar.h" />
     <QtMoc Include="src\ui\widgets\ModuleCardGrid.h" />
+    <QtMoc Include="src\ui\widgets\SessionOverlayWidget.h" />
     <QtMoc Include="src\ui\windows\PomodoroWindow.h" />
     <QtMoc Include="src\ui\windows\Game2048Window.h" />
     <QtMoc Include="src\ui\windows\TypingTestWindow.h" />
@@ -142,16 +147,20 @@
     <QtMoc Include="src\logic\PomodoroModel.h" />
     <QtMoc Include="src\logic\ReactionTestModel.h" />
     <QtMoc Include="src\logic\TypingTestModel.h" />
+    <QtMoc Include="src\logic\WatermarkModel.h" />
+    <QtMoc Include="src\ui\windows\WatermarkWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\ModuleInfo.h" />
     <ClInclude Include="src\core\ModuleRegistry.h" />
+    <ClInclude Include="src\core\ModuleInterfaces.h" />
     <ClInclude Include="src\resources\AppIcon.h" />
     <QtMoc Include="src\ui\windows\FlappyBirdWindow.h" />
     <QtMoc Include="src\ui\windows\MazeGameWindow.h" />
     <QtMoc Include="src\ui\windows\ReactionTestWindow.h" />
     <QtMoc Include="src\ui\widgets\ReactionTestWidget.h" />
     <ClInclude Include="src\services\SystemCommandService.h" />
+    <ClInclude Include="src\services\StorageService.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

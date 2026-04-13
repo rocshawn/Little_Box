@@ -15,7 +15,7 @@ class ReactionTestWidget final : public QWidget {
     Q_OBJECT
 
 public:
-    explicit ReactionTestWidget(QWidget* parent = nullptr);
+    explicit ReactionTestWidget(ReactionTestModel* model, QWidget* parent = nullptr);
     ~ReactionTestWidget() override = default;
 
 protected:

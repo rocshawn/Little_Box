@@ -1,6 +1,8 @@
 #include "FlappyBirdWindow.h"
 
 #include "../../logic/FlappyBirdModel.h"
+#include "../../services/StorageService.h"
+#include "../widgets/SessionOverlayWidget.h"
 
 #include <QColor>
 #include <QFrame>
@@ -136,6 +138,10 @@ void FlappyBirdWidget::paintEvent(QPaintEvent* event) {
 }
 
 void FlappyBirdWidget::keyPressEvent(QKeyEvent* event) {
+    if (model_->isPaused()) {
+        QWidget::keyPressEvent(event);
+        return;
+    }
     switch (event->key()) {
     case Qt::Key_Space:
     case Qt::Key_Up:
@@ -154,6 +160,7 @@ void FlappyBirdWidget::keyPressEvent(QKeyEvent* event) {
 }
 
 void FlappyBirdWidget::mousePressEvent(QMouseEvent* event) {
+    if (model_->isPaused()) return;
     if (event->button() == Qt::LeftButton) {
         model_->flap();
         event->accept();
@@ -175,6 +182,15 @@ FlappyBirdWindow::FlappyBirdWindow(QWidget* parent)
     connect(model_, &FlappyBirdModel::scoreChanged, this, &FlappyBirdWindow::updateScorePanel);
     connect(model_, &FlappyBirdModel::stateChanged, this, &FlappyBirdWindow::updateScorePanel);
     
+    // Load history
+    if (StorageService::instance().hasHistory("flappy_bird")) {
+        model_->restoreHistory(StorageService::instance().loadHistory("flappy_bird"));
+    }
+
+    if (StorageService::instance().hasSession("flappy_bird")) {
+        model_->restoreSession(StorageService::instance().loadSession("flappy_bird"));
+        showOverlay();
+    }
     updateScorePanel(); 
 }
 
@@ -278,6 +294,7 @@ void FlappyBirdWindow::setupUi() {
 }
 
 void FlappyBirdWindow::startNewGame() {
+    StorageService::instance().clearSession("flappy_bird");
     model_->startNewGame(gameWidget_->height());
     gameWidget_->setFocus();
 }
@@ -293,4 +310,34 @@ void FlappyBirdWindow::updateScorePanel() {
     } else {
         stateLabel_->setText("状态：进行中。控制飞行节奏，穿过更多水管拿到更高分。");
     }
+}
+
+void FlappyBirdWindow::showOverlay() {
+    model_->pause();
+    if (!overlay_) {
+        overlay_ = new SessionOverlayWidget(this);
+        connect(overlay_, &SessionOverlayWidget::continueRequested, this, &FlappyBirdWindow::hideOverlay);
+        connect(overlay_, &SessionOverlayWidget::restartRequested, this, [this]() {
+            hideOverlay();
+            startNewGame();
+        });
+    }
+    overlay_->show();
+    overlay_->raise();
+}
+
+void FlappyBirdWindow::hideOverlay() {
+    model_->resume();
+    if (overlay_) {
+        overlay_->hide();
+    }
+    gameWidget_->setFocus();
+}
+
+void FlappyBirdWindow::closeEvent(QCloseEvent* event) {
+    if (!model_->isGameOver() && model_->hasStarted()) {
+        StorageService::instance().saveSession("flappy_bird", model_->saveSession());
+    }
+    StorageService::instance().saveHistory("flappy_bird", model_->saveHistory());
+    QMainWindow::closeEvent(event);
 }
